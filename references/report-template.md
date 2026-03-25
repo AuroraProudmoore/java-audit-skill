@@ -288,6 +288,103 @@ public String renderTemplate(@RequestParam String template) {
 
 ---
 
+## 行号定位规范
+
+### 精确行号要求
+
+**必须使用实际 Read/Select-String 验证的行号**，禁止模糊范围或猜测。
+
+| 错误示例 | 正确示例 | 说明 |
+|----------|----------|------|
+| `HeaderModelUtils.java:18-35` | `HeaderModelUtils.java:35` | 精确到方法起始行 |
+| `HttpUtil.java:177-193` | `HttpUtil.java:252-253, 321` | 多段代码分开标注 |
+| `SupplierBaseService.java:138-143` | `SupplierBaseService.java:186,188` | 精确到具体行 |
+
+### 行号验证方法
+
+```bash
+# 使用 Select-String 验证行号
+Select-String -Path $file -Pattern "getLoginUserByStr|TrustAllTrustManager" | 
+  ForEach-Object { Write-Host "Line $($_.LineNumber): $($_.Line.Trim())" }
+```
+
+### 多位置标注格式
+
+当漏洞涉及多个代码位置时：
+
+```markdown
+**代码位置**：
+
+```
+HttpUtil.java:252-253        # SSLContext 初始化
+HttpUtil.java:321-335        # TrustAllTrustManager 定义
+```
+```
+
+---
+
+## 分析描述颗粒度规范
+
+### 分析必须包含的要素
+
+每个漏洞的"分析"部分必须包含以下要素，缺一不可：
+
+| 要素 | 说明 | 示例 |
+|------|------|------|
+| **具体方法名** | 精确到类名.方法名() | `HeaderModelUtils.getLoginUserByStr()` |
+| **调用链追踪** | 从入口到漏洞点的完整路径 | Controller → Header → Service |
+| **对比分析** | 与同类安全代码的差异 | `querySheetList()` 有校验 vs `querySheetDetail()` 无校验 |
+| **发现未使用的安全机制** | 项目中存在但未启用的安全配置 | JWT依赖引入但未使用 |
+| **归纳漏洞类型** | 标准漏洞分类 | 客户端信任漏洞、IDOR、中间人攻击 |
+
+### 分析模板
+
+```markdown
+`ClassName.methodName()` 方法[具体行为描述]。系统[缺少的安全控制]，
+攻击者可以[攻击路径]。形成**[漏洞类型]**（CWE-XXX）。
+
+对比同类方法 `OtherClass.safeMethod()`，该方法[差异描述]，
+进一步验证了安全控制的缺失。
+
+经审查 `pom.xml` 发现项目已引入[安全依赖]，但全局搜索显示实际并未使用。
+```
+
+### 颗粒度对比
+
+#### ❌ 模糊分析（不可接受）
+
+```
+1. **漏洞成因**：系统信任客户端传来的用户身份信息，仅做Base64解码，无签名验证。
+2. **攻击方式**：攻击者可构造恶意JSON伪造身份。
+3. **影响范围**：任意用户身份伪造。
+```
+
+#### ✅ 精准分析（符合要求）
+
+```
+`HeaderModelUtils.getLoginUserByStr()` 方法仅对 Header 中的 Base64 编码数据
+进行解码，然后直接调用 `GsonUtil.getGson2().fromJson()` 反序列化为 LoginUserBo 对象。
+系统没有对用户信息进行任何签名验证或加密保护，攻击者可以轻松伪造任意用户的登录信息。
+
+控制器层（如 `FlightController.setFlightCityHistory()`）直接从请求头 `la517_loginUser`
+获取用户信息，该信息未经服务器端验证就传递给服务层使用，形成**客户端信任漏洞**。
+
+经审查 `pom.xml` 发现项目已引入 JWT 相关依赖（`jjwt`），但全局搜索显示实际并未使用。
+`LogInterceptor` 拦截器仅用于日志追踪（requestId 生成），不包含任何认证逻辑。
+```
+
+### 分析深度分级
+
+| 级别 | 要求 | 适用场景 |
+|------|------|----------|
+| L1 基础 | 说明漏洞存在原因 | 快速扫描结果 |
+| L2 标准 | +调用链+漏洞类型 | 常规审计报告 |
+| L3 深度 | +对比分析+未使用安全机制 | 详细漏洞报告 |
+
+**本次审计要求 L3 深度级别**。
+
+---
+
 ## 报告生成检查清单
 
 每个漏洞报告提交前，确认以下要求：

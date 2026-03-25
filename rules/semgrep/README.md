@@ -2,17 +2,6 @@
 
 本目录包含 Java 代码安全审计的 Semgrep 规则，对应 Java Audit Skill 的 Phase 4 输出。
 
-**规则来源参考**：
-- [Oracle - Secure Coding Guidelines for Java SE](https://www.oracle.com/java/technologies/javase/seccodeguide.html) - 官方权威安全编码指南
-- [JavaSec - Java Web 安全知识库](https://www.javasec.org/) - 文件访问、文件上传、XSS、反序列化、Fastjson 等
-- [Y4tacker/JavaSec](https://github.com/Y4tacker/JavaSec) - CC/CB链、内存马、Struts2、JDBC Attack
-- [helloexp/0day](https://github.com/helloexp/0day) - Java专区漏洞POC
-- [腾讯 SecGuide 安全开发规范](https://github.com/Tencent/secguide) - Java/JavaScript 安全编码规范
-- Spring Boot Actuator 官方文档 - 端点安全配置
-- Apache Shiro 安全公告 - CVE-2016-4437 密钥硬编码
-- [OWASP Java 安全指南](https://owasp.org/www-project-java/)
-- Semgrep 官方规则库
-
 ## 规则文件
 
 | 文件 | 风险等级 | 规则数 | 覆盖漏洞 |

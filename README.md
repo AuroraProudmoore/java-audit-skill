@@ -4,13 +4,14 @@
 
 **AI-Powered Java Security Audit Framework**
 
+[![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
 [![Security](https://img.shields.io/badge/Security-Policy-green.svg)](SECURITY.md)
 
 [English](#english) | [中文](#中文)
-
+<a name="">email：aurora1219@139.com</a>
 </div>
 
 ---
@@ -34,7 +35,7 @@
 | 特性 | 说明 |
 |------|------|
 | 🔄 **6 阶段审计流水线** | 从代码度量到标准化报告，每个阶段有明确的输入输出和质量标准 |
-| 📊 **三层审计架构** | 预扫描 + 双轨审计 + 语义验证，兼顾效率与深度 |
+| 📊 **多层审计架构** | 预扫描 + 双轨审计 + CoT推理 + 语义验证，兼顾效率与深度 |
 | 🚧 **覆盖率门禁** | 强制 100% 代码覆盖，解决 LLM "跳过不重要代码" 的天性 |
 | 🎯 **DKTSS 评分体系** | 比 CVSS 更贴合实战的漏洞优先级评分 |
 | 🛡️ **反幻觉机制** | 5 条铁律确保报告可信度 |
@@ -61,6 +62,8 @@ java-audit-skill/
 ├── references/
 │   ├── dktss-scoring.md        # DKTSS 漏洞评分体系
 │   ├── vulnerability-conditions.md  # 漏洞成立判断条件
+│   ├── logic-vulnerability-cot.md   # 逻辑漏洞 CoT 四步推理
+│   ├── business-scenario-tags.md    # 业务场景标签系统
 │   ├── security-checklist.md   # 55+ 漏洞类型检查清单
 │   └── report-template.md      # 标准化报告模板
 ├── scripts/
@@ -77,7 +80,7 @@ java-audit-skill/
 
 ```
 Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5
- 代码度量   项目侦察   全量审计   覆盖率门禁  漏洞验证  规则沉淀  标准化报告
+ 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  规则沉淀  标准化报告
 ```
 
 #### Phase 0: 代码库度量
@@ -85,6 +88,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 
 统计项目规模，计算审计工作量。
 
 **输出**: `metrics.json`
+
 ```json
 {
   "total_loc": 131000,
@@ -110,12 +114,13 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 
 
 **Agent 分配**: `Agent数量 = ceil(EALOC / 15000)`
 
-#### Phase 2: 三层审计架构
+#### Phase 2: 多层审计架构
 
 | 层级 | 内容 | 工具 |
 |------|------|------|
 | **Layer 1** | 全量预扫描 | ripgrep + Semgrep |
 | **Layer 2** | 双轨审计 | LLM |
+| **Layer 2-Deep** | CoT 四步推理（逻辑漏洞） | LLM |
 | **Layer 3** | 调用链语义验证 | LSP / Grep |
 
 **双轨审计模型**：
@@ -132,6 +137,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 
 **这是反 LLM 天性的核心设计**——LLM 倾向于跳过"看起来不重要"的代码，而漏洞偏偏喜欢藏在那些地方。
 
 **门禁规则**：
+
 - 每个 Agent 必须输出「审阅文件清单」
 - 清单与实际文件列表做 diff
 - **覆盖率 < 100% → 禁止进入 Phase 3**
@@ -181,6 +187,7 @@ rules:
 DKTSS（DarkKnight Threat Scoring System）是比 CVSS 更贴合实战的漏洞优先级评分标准。
 
 **核心公式**：
+
 ```
 Score = Base - Friction + Weapon + Ver
 ```
@@ -290,6 +297,7 @@ pip install -r requirements.txt
 **方式二：独立使用脚本**
 
 **Linux/macOS:**
+
 ```bash
 # Phase 0: 代码度量
 python scripts/java_audit.py /path/to/project
@@ -297,11 +305,11 @@ python scripts/java_audit.py /path/to/project
 # 度量 + Layer 1 预扫描
 python scripts/java_audit.py /path/to/project --scan
 
-# 度量 + Tier 分类
-python scripts/java_audit.py /path/to/project --tier
+# 度量 + Tier 分类 + 场景标签
+python scripts/java_audit.py /path/to/project --tier --scenario
 
 # 全部执行
-python scripts/java_audit.py /path/to/project --scan --tier
+python scripts/java_audit.py /path/to/project --scan --tier --scenario
 
 # 覆盖率检查
 python scripts/java_audit.py /path/to/project --coverage --reviewed-file reviewed.md
@@ -310,7 +318,35 @@ python scripts/java_audit.py /path/to/project --coverage --reviewed-file reviewe
 python scripts/java_audit.py /path/to/project --scan --output sarif
 ```
 
+**Windows:**
+
+```powershell
+# Phase 0: 代码度量
+python scripts\java_audit.py C:\path\to\project
+
+# 度量 + Layer 1 预扫描
+python scripts\java_audit.py C:\path\to\project --scan
+
+# 度量 + Tier 分类 + 场景标签
+python scripts\java_audit.py C:\path\to\project --tier --scenario
+
+# 全部执行
+python scripts\java_audit.py C:\path\to\project --scan --tier --scenario
+
+# 覆盖率检查
+python scripts\java_audit.py C:\path\to\project --coverage --reviewed-file reviewed.md
+```
+
+**注意**：Windows 用户推荐使用 Python 脚本（`java_audit.py`），Shell 脚本（`.sh` 文件）需要在 Git Bash 或 WSL 中运行。
+
+**新增参数说明**：
+
+| 参数 | 说明 |
+|------|------|
+| `--scenario` | 生成 API 场景标签（scenario-tags.json），包含 API 端点、场景类型、风险等级 |
+
 **查看帮助：**
+
 ```bash
 python scripts/java_audit.py --help
 ```
@@ -363,6 +399,8 @@ python scripts/java_audit.py --help
 | [SKILL.md](SKILL.md) | 完整协议文档 |
 | [references/dktss-scoring.md](references/dktss-scoring.md) | DKTSS 评分体系 |
 | [references/vulnerability-conditions.md](references/vulnerability-conditions.md) | 漏洞成立条件 |
+| [references/logic-vulnerability-cot.md](references/logic-vulnerability-cot.md) | 逻辑漏洞 CoT 四步推理 |
+| [references/business-scenario-tags.md](references/business-scenario-tags.md) | 业务场景标签系统 |
 | [references/security-checklist.md](references/security-checklist.md) | 安全检查清单 |
 | [references/report-template.md](references/report-template.md) | 报告模板 |
 
@@ -373,6 +411,7 @@ python scripts/java_audit.py --help
 欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
 
 **贡献方向**：
+
 - 🐛 报告 Bug
 - 💡 提出新功能建议
 - 📝 改进文档
@@ -406,7 +445,7 @@ python scripts/java_audit.py --help
 | Feature | Description |
 |---------|-------------|
 | 🔄 **6-Phase Audit Pipeline** | From code metrics to standardized reports, each phase has clear inputs, outputs, and quality standards |
-| 📊 **3-Layer Audit Architecture** | Pre-scan + Dual-track audit + Semantic verification |
+| 📊 **Multi-Layer Audit Architecture** | Pre-scan + Dual-track audit + CoT reasoning + Semantic verification |
 | 🚧 **Coverage Gate** | Enforces 100% code coverage, solving LLM's tendency to skip "unimportant code" |
 | 🎯 **DKTSS Scoring System** | Vulnerability priority scoring more practical than CVSS |
 | 🛡️ **Anti-Hallucination Mechanism** | 5 iron rules ensure report credibility |
@@ -436,6 +475,7 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 
 Measure project scale and calculate audit workload.
 
 **Output**: `metrics.json`
+
 ```json
 {
   "total_loc": 131000,
@@ -461,12 +501,13 @@ Measure project scale and calculate audit workload.
 
 **Agent Allocation**: `Agents = ceil(EALOC / 15000)`
 
-#### Phase 2: 3-Layer Audit Architecture
+#### Phase 2: Multi-Layer Audit Architecture
 
 | Layer | Content | Tools |
 |-------|---------|-------|
 | **Layer 1** | Full pre-scan (no LLM) | ripgrep + Semgrep |
 | **Layer 2** | Dual-track audit | LLM |
+| **Layer 2-Deep** | CoT reasoning (logic vulnerabilities) | LLM |
 | **Layer 3** | Call chain semantic verification | LSP / Grep |
 
 **Dual-Track Audit Model**:
@@ -483,6 +524,7 @@ Track 2 (Control-driven): Endpoint entry → Check permissions → Business logi
 **This is the core design against LLM's nature**—LLMs tend to skip "seemingly unimportant" code, while vulnerabilities love to hide there.
 
 **Gate Rules**:
+
 - Each Agent must output a "Reviewed Files List"
 - Diff the list against actual files
 - **Coverage < 100% → Phase 3 blocked**
@@ -532,6 +574,7 @@ rules:
 DKTSS (DarkKnight Threat Scoring System) is a vulnerability priority scoring standard more practical than CVSS.
 
 **Core Formula**:
+
 ```
 Score = Base - Friction + Weapon + Ver
 ```
@@ -644,6 +687,7 @@ python scripts/java_audit.py /path/to/project --scan --output sarif
 ```
 
 **View help:**
+
 ```bash
 python scripts/java_audit.py --help
 ```
@@ -684,6 +728,7 @@ python scripts/java_audit.py --help
 Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 **Contribution Areas**:
+
 - 🐛 Report bugs
 - 💡 Suggest new features
 - 📝 Improve documentation

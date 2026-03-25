@@ -485,6 +485,84 @@ grep -rn "SpelExpression\|Ognl\|Velocity\|FreeMarker" --include="*.java" $PROJEC
 
 ---
 
+## 15. JWT 安全检查（补充）
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 15.1 | JWT 弱密钥 | `grep -rn "secret\|key.*=.*\"" --include="*.java" \| grep -i jwt` | 严重 | 弱密钥 → 可伪造 Token |
+| 15.2 | 算法混淆 | 检查是否验证算法 | 高 | alg=none → 绕过签名 |
+| 15.3 | Token 过期时间 | `grep -rn "setExpiration\|exp" --include="*.java"` | 高 | 无过期 → Token 永久有效 |
+| 15.4 | 敏感信息存 JWT | 检查 JWT payload 内容 | 高 | 密码/密钥存 JWT → 泄露 |
+
+**JWT 弱密钥检测**:
+```bash
+# 检查常见弱密钥
+grep -rn "secret.*=.*\"123\|secret.*=.*\"password\|secret.*=.*\"key" --include="*.java"
+```
+
+---
+
+## 16. LDAP 注入检查
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 16.1 | LDAP 查询拼接 | `grep -rn "search\|lookup" --include="*.java" \| grep -i "ldap\|DirContext"` | 高 | 用户输入拼接到 LDAP 查询 |
+| 16.2 | 特殊字符过滤 | 检查是否过滤 `* ( ) \x00` | 高 | 未过滤 → LDAP 注入 |
+
+**LDAP 注入 Payload**:
+```
+*)(uid=*))(|(uid=*
+*)(objectClass=*)
+```
+
+---
+
+## 17. CORS 配置检查
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 17.1 | Access-Control-Allow-Origin | `grep -rn "Access-Control-Allow-Origin\|allowedOrigins\|addCorsMappings" --include="*.java\|*.yml"` | 高 | `*` → 任意域访问 |
+| 17.2 | credentials 模式 | `grep -rn "allowCredentials\|Access-Control-Allow-Credentials" --include="*.java\|*.yml"` | 严重 | `*` + `true` → Cookie 泄露 |
+| 17.3 | 暴露敏感头 | `grep -rn "exposedHeaders" --include="*.java\|*.yml"` | 中 | 暴露 Authorization 等敏感头 |
+
+**危险 CORS 配置**:
+```java
+// 危险配置
+@Configuration
+public class CorsConfig {
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.addAllowedOrigin("*");           // 危险：允许任意域
+        config.setAllowCredentials(true);       // 危险：允许携带 Cookie
+        return new CorsFilter(...);
+    }
+}
+```
+
+---
+
+## 18. 请求走私检查
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 18.1 | 代理服务器配置 | 检查 Nginx/Apache 配置 | 高 | 配置不当 → 请求走私 |
+| 18.2 | Content-Length 处理 | 检查后端如何处理 CL | 高 | 前后端解析不一致 |
+| 18.3 | Transfer-Encoding | 检查后端是否处理 TE | 高 | TE + CL → 走私 |
+
+---
+
+## 19. 其他补充检查项
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 19.1 | 敏感接口限流 | `grep -rn "RateLimiter\|@Limit\|Throttle" --include="*.java"` | 中 | 无限流 → 暴力攻击 |
+| 19.2 | 接口幂等性 | 检查支付/下单等接口是否有幂等控制 | 高 | 无幂等 → 重复操作 |
+| 19.3 | 批量操作限制 | 检查批量删除/导出接口 | 中 | 无限制 → DoS |
+| 19.4 | 异步任务安全 | `grep -rn "@Async\|CompletableFuture\|ThreadPoolExecutor" --include="*.java"` | 中 | 敏感操作是否鉴权 |
+
+---
+
 ## 附录 B: 风险等级定义
 
 | 等级 | 定义 | 示例 |

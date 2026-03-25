@@ -12,6 +12,11 @@
 # Requirements:
 #   - bash, find, grep, wc
 #   - python3 (for calculations)
+#
+# Windows Users:
+#   此脚本需要在 Git Bash 或 WSL 中运行。
+#   推荐使用 Python 脚本替代：
+#   python scripts/java_audit.py <target_dir> --coverage --reviewed-file <reviewed_file>
 
 set -e
 

@@ -85,6 +85,11 @@ echo "### Hessian" >> "$P0_FILE"
 grep -rn "HessianInput\|Hessian2Input" --include="*.java" "$TARGET_DIR" >> "$P0_FILE" 2>/dev/null || echo "未发现" >> "$P0_FILE"
 echo "" >> "$P0_FILE"
 
+# SnakeYAML
+echo "### SnakeYAML" >> "$P0_FILE"
+grep -rn "new Yaml\|Yaml\(\)\.load\|SnakeYAML" --include="*.java" "$TARGET_DIR" >> "$P0_FILE" 2>/dev/null || echo "未发现" >> "$P0_FILE"
+echo "" >> "$P0_FILE"
+
 # SSTI
 echo "### SSTI - Velocity" >> "$P0_FILE"
 grep -rn "Velocity\.evaluate\|VelocityEngine\|mergeTemplate" --include="*.java" "$TARGET_DIR" >> "$P0_FILE" 2>/dev/null || echo "未发现" >> "$P0_FILE"
@@ -105,6 +110,10 @@ echo "" >> "$P0_FILE"
 
 echo "### OGNL 注入" >> "$P0_FILE"
 grep -rn "OgnlUtil\|Ognl\.getValue\|ActionContext" --include="*.java" "$TARGET_DIR" >> "$P0_FILE" 2>/dev/null || echo "未发现" >> "$P0_FILE"
+echo "" >> "$P0_FILE"
+
+echo "### MVEL 注入" >> "$P0_FILE"
+grep -rn "MVEL\.eval\|MVEL\.executeExpression\|MVEL\.compileExpression" --include="*.java" "$TARGET_DIR" >> "$P0_FILE" 2>/dev/null || echo "未发现" >> "$P0_FILE"
 echo "" >> "$P0_FILE"
 
 # JNDI 注入

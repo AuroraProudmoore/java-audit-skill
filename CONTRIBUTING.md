@@ -113,6 +113,8 @@ java-audit-skill/
 ├── references/           # 参考文档
 │   ├── dktss-scoring.md
 │   ├── vulnerability-conditions.md
+│   ├── logic-vulnerability-cot.md
+│   ├── business-scenario-tags.md
 │   ├── security-checklist.md
 │   └── report-template.md
 ├── scripts/              # 工具脚本

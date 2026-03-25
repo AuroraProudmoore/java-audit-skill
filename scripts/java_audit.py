@@ -205,6 +205,169 @@ def run_tier_classification(project_path, output_dir):
     }
 
 # ============================================
+# Scenario Tags 生成
+# ============================================
+
+# 场景类型关键词映射
+SCENARIO_KEYWORDS = {
+    "FINANCIAL_TRANSACTION": {
+        "keywords": ["pay", "payment", "refund", "transfer", "withdraw", "充值", "支付", "退款", "转账"],
+        "risk_level": "CRITICAL",
+        "focus_checks": ["金额篡改", "并发竞争", "状态机绕过", "水平越权"]
+    },
+    "PRIVILEGED_OPERATION": {
+        "keywords": ["admin", "manage", "delete", "config", "system", "管理", "删除", "配置"],
+        "risk_level": "HIGH",
+        "focus_checks": ["垂直越权", "权限绕过"]
+    },
+    "RESOURCE_ALLOCATION": {
+        "keywords": ["order", "create", "book", "reserve", "下单", "预约", "抢购"],
+        "risk_level": "HIGH",
+        "focus_checks": ["并发竞争", "库存绕过"]
+    },
+    "STATE_TRANSITION": {
+        "keywords": ["approve", "reject", "ship", "deliver", "cancel", "审批", "发货", "取消"],
+        "risk_level": "HIGH",
+        "focus_checks": ["状态机绕过", "流程跳跃"]
+    },
+    "DATA_ACCESS": {
+        "keywords": ["get", "query", "list", "detail", "export", "查询", "列表", "详情", "导出"],
+        "risk_level": "MEDIUM",
+        "focus_checks": ["水平越权", "信息泄露"]
+    },
+    "USER_OPERATION": {
+        "keywords": ["profile", "password", "update", "modify", "个人", "密码", "修改"],
+        "risk_level": "MEDIUM",
+        "focus_checks": ["认证绕过", "密码安全"]
+    },
+    "PUBLIC_ACCESS": {
+        "keywords": ["public", "open", "anonymous", "公开", "匿名"],
+        "risk_level": "LOW",
+        "focus_checks": ["XSS", "SSRF"]
+    }
+}
+
+def identify_scenario(method, path, annotations):
+    """根据方法、路径和注解识别场景类型"""
+    combined = f"{method} {path} {' '.join(annotations)}".lower()
+    
+    for scenario, config in SCENARIO_KEYWORDS.items():
+        for keyword in config["keywords"]:
+            if keyword.lower() in combined:
+                return scenario, config["risk_level"], config["focus_checks"]
+    
+    # 默认返回 DATA_ACCESS
+    return "DATA_ACCESS", "MEDIUM", ["水平越权", "信息泄露"]
+
+def generate_scenario_tags(project_path, output_dir):
+    """生成 API 场景标签"""
+    print("\n" + "=" * 60)
+    print("Phase 1: API 场景标签生成")
+    print("=" * 60)
+    
+    apis = []
+    scenario_count = {}
+    
+    for root, dirs, files in os.walk(project_path):
+        dirs[:] = [d for d in dirs if d not in ['target', 'node_modules', '.git', 'build', 'out', '.gradle', '.idea', 'test', 'tests']]
+        
+        for file in files:
+            if not file.endswith(('.java', '.kt')):
+                continue
+            
+            file_path = os.path.join(root, file)
+            content = get_file_content(file_path)
+            
+            # 检查是否是 Controller
+            if not any(x in content for x in ['@Controller', '@RestController', '@WebServlet']):
+                continue
+            
+            rel_path = os.path.relpath(file_path, project_path)
+            
+            # 提取 RequestMapping 类级别路径
+            class_mapping = ""
+            rm_match = re.search(r'@RequestMapping\(["\']([^"\']+)["\']', content)
+            if rm_match:
+                class_mapping = rm_match.group(1)
+            
+            # 提取方法级别映射
+            method_patterns = [
+                (r'@GetMapping\(["\']([^"\']+)["\']', 'GET'),
+                (r'@PostMapping\(["\']([^"\']+)["\']', 'POST'),
+                (r'@PutMapping\(["\']([^"\']+)["\']', 'PUT'),
+                (r'@DeleteMapping\(["\']([^"\']+)["\']', 'DELETE'),
+                (r'@PatchMapping\(["\']([^"\']+)["\']', 'PATCH'),
+                (r'@RequestMapping\([^)]*value\s*=\s*["\']([^"\']+)["\'][^)]*method\s*=\s*RequestMethod\.(\w+)', None),
+            ]
+            
+            for pattern, method in method_patterns:
+                for match in re.finditer(pattern, content):
+                    if method:
+                        path = class_mapping + match.group(1)
+                    else:
+                        path = class_mapping + match.group(1)
+                        method = match.group(2)
+                    
+                    # 获取方法名
+                    line_start = content[:match.start()].count('\n') + 1
+                    lines = content.split('\n')
+                    method_name = ""
+                    for i in range(match.start() // 80, min(len(lines), match.start() // 80 + 10)):
+                        if 'public' in lines[i] or 'def' in lines[i]:
+                            method_match = re.search(r'(?:public|def)\s+\w+\s+(\w+)\s*\(', lines[i])
+                            if method_match:
+                                method_name = method_match.group(1)
+                                break
+                    
+                    # 检查权限注解
+                    annotations = []
+                    if '@PreAuthorize' in content[match.start():match.start()+500]:
+                        annotations.append('@PreAuthorize')
+                    if '@Secured' in content[match.start():match.start()+500]:
+                        annotations.append('@Secured')
+                    if 'permitAll' in content[match.start():match.start()+500]:
+                        annotations.append('permitAll')
+                    
+                    # 识别场景
+                    scenario, risk_level, focus_checks = identify_scenario(method, path, annotations)
+                    
+                    apis.append({
+                        "method": method,
+                        "path": path,
+                        "controller": f"{rel_path}:{line_start}",
+                        "method_name": method_name,
+                        "scenario_type": scenario,
+                        "risk_level": risk_level,
+                        "focus_checks": focus_checks,
+                        "annotations": annotations
+                    })
+                    
+                    scenario_count[scenario] = scenario_count.get(scenario, 0) + 1
+    
+    # 输出统计
+    print(f"\n[*] 发现 API 端点: {len(apis)} 个")
+    print(f"[*] 场景分布:")
+    for scenario, count in sorted(scenario_count.items(), key=lambda x: -x[1]):
+        print(f"  {scenario}: {count} 个")
+    
+    # 生成 scenario-tags.json
+    output = {
+        "generated_at": datetime.now().isoformat(),
+        "project": os.path.basename(project_path),
+        "total_apis": len(apis),
+        "scenario_distribution": scenario_count,
+        "apis": apis
+    }
+    
+    output_path = os.path.join(output_dir, "scenario-tags.json")
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(output, f, ensure_ascii=False, indent=2)
+    
+    print(f"\n[OK] 场景标签文件: {output_path}")
+    
+    return output
+
+# ============================================
 # Layer 1 预扫描
 # ============================================
 
@@ -559,7 +722,8 @@ def main():
   python java_audit.py /path/to/project                    # 仅度量
   python java_audit.py /path/to/project --scan             # 度量 + Layer 1 预扫描
   python java_audit.py /path/to/project --tier             # 度量 + Tier 分类
-  python java_audit.py /path/to/project --scan --tier      # 全部执行
+  python java_audit.py /path/to/project --scenario         # 度量 + 场景标签
+  python java_audit.py /path/to/project --scan --tier --scenario  # 全部执行
   python java_audit.py /path/to/project --coverage --reviewed-file reviewed.md  # 覆盖率检查
   python java_audit.py /path/to/project --scan --output sarif  # SARIF 格式输出
         """
@@ -567,6 +731,7 @@ def main():
     parser.add_argument("project_path", help="项目根目录")
     parser.add_argument("--scan", action="store_true", help="执行 Layer 1 危险模式预扫描")
     parser.add_argument("--tier", action="store_true", help="执行 Tier 分类")
+    parser.add_argument("--scenario", action="store_true", help="生成 API 场景标签")
     parser.add_argument("--coverage", action="store_true", help="执行覆盖率检查")
     parser.add_argument("--reviewed-file", help="审阅清单文件路径（用于覆盖率检查）")
     parser.add_argument("--output", choices=["json", "sarif"], default="json", help="输出格式 (默认: json)")
@@ -611,6 +776,11 @@ def main():
     if args.tier:
         tier_results = run_tier_classification(args.project_path, output_dir)
     
+    # Phase 1: 场景标签生成
+    scenario_results = None
+    if args.scenario:
+        scenario_results = generate_scenario_tags(args.project_path, output_dir)
+    
     # Layer 1: 预扫描
     scan_results = {}
     if args.scan:
@@ -632,6 +802,7 @@ def main():
         output_data = {
             "metrics": stats,
             "tier_results": tier_results,
+            "scenario_results": scenario_results,
             "scan_results": scan_results if args.scan else None,
             "coverage_results": coverage_results,
             "generated_at": datetime.now().isoformat()
