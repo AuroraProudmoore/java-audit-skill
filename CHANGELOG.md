@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 5 | references/ | DKTSS 评分依赖联网查询 CVE，离线环境无法使用 | 中 | ✅ 已修复 |
 | 6 | SKILL.md Phase 4 | Semgrep 安装说明缺失 | 低 | ✅ 已修复 |
 | 7 | examples/ | 缺少示例项目和完整审计报告 | 低 | ✅ 已修复 |
+| 8 | SKILL.md Phase 2.5 | 门禁阈值与判断逻辑不一致 | 中 | ✅ 已修复 |
+| 9 | SKILL.md 检查清单 | "9个必填字段"已移除但检查清单未更新 | 中 | ✅ 已修复 |
+| 10 | SKILL.md Phase 0 | scenario-tags.json 生成位置描述不一致 | 低 | ✅ 已修复 |
+| 11 | SKILL.md 流程图 | Phase 4 标为必经阶段但实际可选 | 低 | ✅ 已修复 |
+| 12 | SKILL.md Phase 1 | Agent 分配机制不清晰 | 低 | ✅ 已修复 |
 
 ### Added / 新增
 

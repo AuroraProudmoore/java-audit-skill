@@ -4,7 +4,7 @@
 
 **AI-Powered Java Security Audit Framework**
 
-[![Version](https://img.shields.io/badge/Version-1.2.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
@@ -59,18 +59,24 @@
 java-audit-skill/
 ├── SKILL.md                    # 主协议文档（6阶段审计流水线）
 ├── README.md                   # 项目说明文档
+├── REPORT-RULES.md             # 报告输出规范（11条铁律）
+├── CHANGELOG.md                # 版本更新记录
 ├── references/
 │   ├── dktss-scoring.md        # DKTSS 漏洞评分体系
 │   ├── vulnerability-conditions.md  # 漏洞成立判断条件
 │   ├── logic-vulnerability-cot.md   # 逻辑漏洞 CoT 四步推理
 │   ├── business-scenario-tags.md    # 业务场景标签系统
 │   ├── security-checklist.md   # 55+ 漏洞类型检查清单
-│   └── report-template.md      # 标准化报告模板
+│   ├── report-template.md      # 标准化报告模板
+│   └── cve-offline-lookup.md   # 离线 CVE 速查表
 ├── scripts/
-│   ├── java_audit.py           # 审计辅助脚本
+│   ├── java_audit.py           # 审计辅助脚本（跨平台）
 │   ├── layer1-scan.sh          # Layer 1 危险模式预扫描
 │   ├── tier-classify.sh        # Tier 分级脚本
 │   └── coverage-check.sh       # 覆盖率门禁检查
+├── rules/semgrep/              # Semgrep 规则（198条）
+├── examples/
+│   └── vulnerable-springboot/  # 完整审计报告示例
 └── assets/                     # 图表/流程图资源
 ```
 
@@ -79,15 +85,18 @@ java-audit-skill/
 ### ⚙️ 6 阶段审计流水线
 
 ```
-Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5
- 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  规则沉淀  标准化报告
+Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5
+ 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  标准化报告
+                                      ↓
+                                Phase 4（可选）
+                                规则沉淀
 ```
 
 #### Phase 0: 代码库度量
 
 统计项目规模，计算审计工作量。
 
-**输出**: `metrics.json`
+**输出**: `audit-metrics.json`
 
 ```json
 {
@@ -95,7 +104,8 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 
   "java_files": 847,
   "controllers": 40,
   "modules": 5,
-  "complexity_score": "HIGH"
+  "ealoc": 98750,
+  "agents_needed": 7
 }
 ```
 
