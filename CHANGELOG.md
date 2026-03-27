@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-03-27
+
+### 发现的问题 / Issues Found
+
+| # | 文件 | 问题 | 严重性 | 状态 |
+|---|------|------|--------|------|
+| 1 | SKILL.md Phase 5 | references/ 文档未强制阅读，用户易跳过导致格式错误 | 高 | ✅ 已修复 |
+| 2 | SKILL.md | "9个必填字段组" 与 report-template.md "三段式格式" 不一致 | 高 | ✅ 已修复 |
+| 3 | SKILL.md 命令示例 | 只有 Linux bash 格式，Windows 用户需自行转换 | 中 | ✅ 已修复 |
+| 4 | SKILL.md Phase 2.5 | 覆盖率门禁缺少自动化工具说明，100% 对大型项目不现实 | 中 | ✅ 已修复 |
+| 5 | references/ | DKTSS 评分依赖联网查询 CVE，离线环境无法使用 | 中 | ✅ 已修复 |
+| 6 | SKILL.md Phase 4 | Semgrep 安装说明缺失 | 低 | ✅ 已修复 |
+| 7 | examples/ | 缺少示例项目和完整审计报告 | 低 | ✅ 已修复 |
+
+### Added / 新增
+
+- **references/cve-offline-lookup.md**: 离线 CVE 速查表，覆盖 Log4j、Fastjson、Spring、Shiro、Jackson、Tomcat、XStream 等常见组件
+- **examples/README.md**: 示例项目目录说明
+- **examples/vulnerable-springboot/audit-report.md**: 完整审计报告示例，包含 4 个漏洞（Velocity SSTI、Fastjson RCE、SQL注入、水平越权）的详细分析
+
+### Changed / 变更
+
+- **SKILL.md Phase 5**: 添加 "⚠️ 必须先阅读模板" 强制要求，确保用户阅读 report-template.md
+- **SKILL.md Phase 5**: 移除重复的 "9个必填字段组" 定义，统一引用 report-template.md
+- **SKILL.md Phase 2.5**: 添加 `java_audit.py --coverage` 自动化覆盖率检查说明
+- **SKILL.md Phase 2.5**: 按项目规模分级覆盖率阈值（小型 100%、中型 95%、大型 90%），T1 文件必须 100%
+- **SKILL.md Phase 4**: 添加 Semgrep 安装说明和快速扫描命令
+- **SKILL.md 参考文档**: 添加 cve-offline-lookup.md 和 examples/ 链接
+
+### Fixed / 修复
+
+- **SKILL.md Phase 0**: 添加 Windows PowerShell 版本命令示例
+- **SKILL.md Phase 1**: 场景识别脚本添加 PowerShell 版本
+- **SKILL.md Layer 1**: P0/P1/P2 危险模式扫描命令添加 PowerShell 版本
+
+### Improved / 改进
+
+- 覆盖率门禁更加务实：按项目规模分级，大型项目不再强制 100%
+- 离线环境支持：通过 cve-offline-lookup.md 可查常见 CVE 信息
+- 学习曲线优化：示例报告帮助用户理解标准格式
+
+---
+
 ## [1.2.0] - 2026-03-25
 
 ### 发现的问题 / Issues Found
