@@ -5,6 +5,118 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-30
+
+### 审查发现的问题 / Issues Found in Review
+
+| # | 问题 | 严重性 | 状态 |
+|---|------|--------|------|
+| 1 | Kotlin 支持不完整 - 扫描命令只检查 `*.java`，遗漏 `*.kt` 文件 | 🔴 高 | ✅ 已修复 |
+| 2 | 覆盖率检查逻辑缺陷 - 正则误匹配导致覆盖率虚高 | 🔴 高 | ✅ 已修复 |
+| 3 | LLM/AI 安全规则缺失 - 新技术栈无防护 | 🔴 高 | ✅ 已修复 |
+| 4 | GraphQL 安全规则缺失 - API 安全盲区 | 🔴 高 | ✅ 已修复 |
+| 5 | Jakarta EE 覆盖不完整 - Spring Boot 3.x 漏检 | 🟠 中 | ✅ 已修复 |
+| 6 | Spring Security 6 规则缺失 - 新框架漏检 | 🟠 中 | ✅ 已修复 |
+| 7 | Kotlin 特有漏洞模式未覆盖 | 🟠 中 | ✅ 已修复 |
+| 8 | Fastjson 2.x 版本判断缺失 | 🟠 中 | ✅ 已修复 |
+| 9 | DKTSS 评分上限处理不一致 | 🟠 中 | ✅ 已修复 |
+| 10 | 覆盖率门禁阈值设计问题 - 未分层要求 | 🟠 中 | ✅ 已修复 |
+| 11 | JWT 弱密钥检测不完整 | 🟠 中 | ✅ 已修复 |
+| 12 | CORS 安全检查不足 | 🟠 中 | ✅ 已修复 |
+| 13 | Java 21 新特性安全规则缺失 | 🟠 中 | ✅ 已修复 |
+| 14 | 幂等性检查缺失 | 🟡 低 | ✅ 已修复 |
+| 15 | 并发安全检查不完整 | 🟡 低 | ✅ 已修复 |
+
+### Added / 新增
+
+- **rules/semgrep/java-emerging.yaml**: 新增 45 条新兴技术安全规则
+  - LLM/AI 安全（4条）：API Key 硬编码、Prompt 注入、Agent 无限制、输出未验证
+  - GraphQL 安全（4条）：Introspection、深度限制、批量限制、字段建议
+  - Kotlin 特有漏洞（5条）：!! 空安全绕过、GlobalScope、runBlocking、非安全随机数、强制转换
+  - Java 21 新特性（3条）：Virtual Thread pinned、FFI 内存操作、switch 覆盖
+  - Jakarta EE / Spring Boot 3.x（4条）：Servlet Filter、JPA SQL注入、Validation、Native Image
+  - 并发安全（3条）：无界线程池、竞态条件、ThreadLocal 泄露
+  - 幂等性检查（2条）：支付接口、下单接口
+  - Fastjson 2.x（2条）：AutoType 配置、版本检查
+  - JWT 安全增强（3条）：弱密钥增强检测、无过期时间、alg=none
+  - CORS 安全增强（2条）：* + Credentials 组合、暴露敏感头
+
+- **rules/semgrep/java-microservice.yaml**: 新增 52 条微服务与数据库安全规则
+  - 微服务安全（9条）：Feign 认证、Gateway 路由、Dubbo 协议、gRPC 明文、Istio mTLS
+  - NoSQL 注入（4条）：MongoDB 注入、$where 注入、Elasticsearch 注入、Redis 命令注入
+  - 数据库连接安全（3条）：凭证硬编码、MySQL/PostgreSQL SSL 禁用
+  - 反序列化利用链（4条）：Commons BeanUtils、ROME、C3P0、AspectJWeaver
+  - OWASP Top 10 2021（14条）：完整覆盖 A01-A10 十大风险类别
+
+- **rules/semgrep/java-api-security.yaml**: 新增 54 条 API 安全与输入验证规则
+  - REST API 安全（8条）：DELETE/PUT 认证、批量操作限制、幂等性、敏感数据返回、分页限制、API 文档
+  - 参数验证缺失（6条）：字符串、数值、邮箱、手机号、身份证、可选参数
+  - 敏感数据处理（7条）：密码明文、密码比较、敏感打印、toString、身份证/银行卡存储
+  - 会话与 Token 安全（7条）：Session 敏感信息、Session ID 日志、Cookie 安全、Token URL/硬编码/时序攻击
+  - 异常处理安全（5条）：堆栈泄露、异常消息返回、空 catch、通用 Exception、异常返回成功
+  - 重定向与文件下载（5条）：开放重定向、文件下载路径遍历、响应类型
+
+### Changed / 变更
+
+- **SKILL.md**: 所有扫描命令添加 `--include="*.kt"` 或 PowerShell `Include *.java,*.kt`，支持 Kotlin 文件
+- **SKILL.md Phase 2.5**: 覆盖率门禁改为分层要求
+  - T1 (Controller/Filter): 必须 100%
+  - T2 (Service/DAO): 90-95%
+  - T3 (Entity/VO): 80-90%
+  - 总体覆盖率按项目规模分级
+- **references/vulnerability-conditions.md**: 所有 grep 命令添加 Kotlin 支持
+- **references/dktss-scoring.md**: 核心公式改为 `Score = min(10, Base - Friction + Weapon + Ver)`
+- **scripts/java_audit.py**: 重写 `run_coverage_check()` 函数
+  - 分层统计 T1/T2/T3 覆盖率
+  - 改进文件路径识别（支持 markdown 表格、代码块、行首格式）
+  - 生成详细的分层覆盖率报告
+- **rules/semgrep/java-config.yaml**: 
+  - 添加 Kotlin 文件支持（`*.kt`）
+  - 新增 Spring Security 6.x 规则（`authorizeHttpRequests`、Lambda DSL）
+- **rules/semgrep/README.md**: 更新规则列表，总计 259 条规则
+
+### Fixed / 修复
+
+- 覆盖率检查正则误匹配问题：改进为优先匹配 markdown 表格格式
+- DKTSS 评分超过 10 未处理：添加 `min(10, ...)` 上限
+- Kotlin 项目漏检：所有扫描命令支持 `.kt` 文件
+- **PowerShell 脚本缺失**：新增 `layer1-scan.ps1`、`tier-classify.ps1`、`coverage-check.ps1`
+- **示例报告分析深度不足**：更新示例报告到 L3 级别，包含调用链追踪、对比分析、未使用安全机制
+
+### Improved / 改进
+
+- **规则总数**: 198 → 365 条（+167 条）
+- **技术覆盖**: 新增 LLM/AI、GraphQL、Kotlin、Java 21、Spring Boot 3.x、微服务安全、NoSQL 注入、API 安全、输入验证、敏感数据处理、OWASP Top 10 2021 完整覆盖
+- **覆盖率报告**: 更详细的分层统计，明确 T1 必须 100% 的硬性要求
+
+---
+
+## [1.4.0] - 2026-03-27
+
+### 发现的问题 / Issues Found
+
+| # | 文件 | 问题 | 严重性 | 状态 |
+|---|------|------|--------|------|
+| 1 | SKILL.md Phase 2.5 | 门禁阈值与判断逻辑不一致 | 中 | ✅ 已修复 |
+| 2 | SKILL.md 检查清单 | "9个必填字段"已移除但检查清单未更新 | 中 | ✅ 已修复 |
+| 3 | SKILL.md Phase 0 | scenario-tags.json 生成位置描述不一致 | 低 | ✅ 已修复 |
+| 4 | SKILL.md 流程图 | Phase 4 标为必经阶段但实际可选 | 低 | ✅ 已修复 |
+| 5 | SKILL.md Phase 1 | Agent 分配机制不清晰 | 低 | ✅ 已修复 |
+| 6 | REPORT-RULES.md | 覆盖率阈值未同步更新 | 中 | ✅ 已修复 |
+| 7 | README.md | 版本号和项目结构未更新 | 低 | ✅ 已修复 |
+
+### Changed / 变更
+
+- **SKILL.md Phase 2.5**: 统一门禁判断逻辑，移除"没有例外"表述，改为按项目规模分级
+- **SKILL.md 检查清单**: 更新为"三段式格式齐全"，添加"已阅读 report-template.md"
+- **SKILL.md Phase 0**: 明确标注各输出文件的生成条件（--tier/--scenario/--scan）
+- **SKILL.md 流程图**: Phase 4 放到 Phase 3 后的分支，标注"（可选）"
+- **SKILL.md Phase 1**: 添加 Agent 分配说明，解释不同规模项目的执行方式
+- **REPORT-RULES.md**: 同步覆盖率阈值（小型 100%/中型 95%/大型 90%）
+- **README.md**: 更新版本号、流程图、项目结构
+
+---
+
 ## [1.3.0] - 2026-03-27
 
 ### 发现的问题 / Issues Found

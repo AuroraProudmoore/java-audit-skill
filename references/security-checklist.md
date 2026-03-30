@@ -20,11 +20,11 @@
 
 | # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
 |---|--------|---------------|------|----------|
-| 1.1.1 | 身份认证机制是否存在 | `grep -rn "@EnableWebSecurity\|SecurityConfig\|WebSecurityConfigurerAdapter" --include="*.java"` | 严重 | 无任何认证 → 所有接口暴露 |
-| 1.1.2 | 密码存储是否加密 | `grep -rn "BCrypt\|PBKDF2\|SCrypt\|Argon2" --include="*.java"` | 严重 | 明文存储密码 → 数据库泄露即泄露 |
-| 1.1.3 | 弱哈希算法用于密码 | `grep -rn "MD5\|SHA1\|MessageDigest" --include="*.java" \| grep -i "password"` | 严重 | MD5/SHA1 哈希 → 可彩虹表破解 |
+| 1.1.1 | 身份认证机制是否存在 | `grep -rn "@EnableWebSecurity\|SecurityConfig\|WebSecurityConfigurerAdapter" --include="*.java" --include="*.kt"` | 严重 | 无任何认证 → 所有接口暴露 |
+| 1.1.2 | 密码存储是否加密 | `grep -rn "BCrypt\|PBKDF2\|SCrypt\|Argon2" --include="*.java" --include="*.kt"` | 严重 | 明文存储密码 → 数据库泄露即泄露 |
+| 1.1.3 | 弱哈希算法用于密码 | `grep -rn "MD5\|SHA1\|MessageDigest" --include="*.java" --include="*.kt" \| grep -i "password"` | 严重 | MD5/SHA1 哈希 → 可彩虹表破解 |
 | 1.1.4 | 登录失败锁定机制 | 检查登录 Controller 失败处理逻辑 | 高 | 无锁定 → 暴力破解 |
-| 1.1.5 | 验证码机制 | `grep -rn "captcha\|验证码" --include="*.java"` | 中 | 无验证码 → 自动化攻击 |
+| 1.1.5 | 验证码机制 | `grep -rn "captcha\|验证码" --include="*.java" --include="*.kt"` | 中 | 无验证码 → 自动化攻击 |
 | 1.1.6 | 多因素认证 | 检查敏感操作是否有二次验证 | 中 | 无 MFA → 凭据泄露即入侵 |
 | 1.1.7 | 登录信息明文传输 | 检查是否强制 HTTPS | 严重 | HTTP 明文 → 中间人攻击 |
 

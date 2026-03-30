@@ -1,0 +1,676 @@
+rules:
+  # ============================================
+  # API 安全规则 (P1 - High)
+  # ============================================
+  
+  # --------------------------------------------
+  # REST API 安全
+  # --------------------------------------------
+  
+  - id: java-api-delete-no-auth
+    patterns:
+      - pattern-regex: '@DeleteMapping.*\n\s*(public|protected)\s+\w+\s+\w+\s*\([^)]*\)\s*\{'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 DELETE 接口。删除操作应有权限控制和数据归属校验，避免越权删除。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
+
+  - id: java-api-put-no-auth
+    patterns:
+      - pattern-regex: '@PutMapping.*\n\s*(public|protected)\s+\w+\s+\w+\s*\([^)]*\)\s*\{'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 PUT 接口。更新操作应有权限控制和数据归属校验，避免越权修改。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
+
+  - id: java-api-batch-operation-no-limit
+    patterns:
+      - pattern-regex: '@RequestBody\s+List<|@RequestParam\s+.*\[\]|List<\w+>\s+\w+\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到批量操作接口。批量操作应限制数量，避免 DoS 攻击。建议添加 @Size(max=100) 校验。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-770"
+
+  - id: java-api-no-idempotency-key
+    patterns:
+      - pattern-regex: '@PostMapping.*pay|@PostMapping.*order|@PostMapping.*create.*payment'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到支付/下单接口。敏感操作应实现幂等性，使用幂等键或订单号防止重复提交。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-668"
+
+  - id: java-api-response-sensitive-data
+    patterns:
+      - pattern-regex: 'return\s+(password|pwd|secret|token|apiKey|creditCard|idCard|bankCard)|@JsonProperty.*password'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到敏感字段可能返回给前端。密码、Token、身份证号等敏感信息不应返回，应脱敏或排除。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-200"
+
+  - id: java-api-pagination-no-limit
+    patterns:
+      - pattern-regex: '@RequestParam.*pageSize|@RequestParam.*limit|PageRequest\.of\s*\(\s*[^)]+\)|Pageable.*pageSize'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到分页参数。分页大小应有限制，避免一次性查询大量数据导致 DoS。建议 max pageSize=100。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-770"
+
+  # --------------------------------------------
+  # API 版本安全
+  # --------------------------------------------
+  
+  - id: java-api-version-in-url
+    patterns:
+      - pattern-regex: '@RequestMapping\s*\(\s*"/v[0-9]+/|@GetMapping\s*\(\s*"/v[0-9]+/|@PostMapping\s*\(\s*"/v[0-9]+/'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 URL 版本控制。旧版本 API 应有下线计划，避免长期暴露已知漏洞。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-1104"
+
+  # --------------------------------------------
+  # API 文档安全
+  # --------------------------------------------
+  
+  - id: java-api-docs-exposed
+    patterns:
+      - pattern-regex: '/swagger-ui\.html|/api-docs|/swagger-resources|/v2/api-docs|/v3/api-docs'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+        - "*.yml"
+        - "*.yaml"
+    message: "检测到 API 文档路径。生产环境应禁用或配置认证，避免暴露接口信息。"
+    severity: WARNING
+    languages: [generic, java]
+    metadata:
+      category: security
+      cwe: "CWE-489"
+
+  # ============================================
+  # 输入验证规则 (P1 - High)
+  # ============================================
+  
+  # --------------------------------------------
+  # 参数验证缺失
+  # --------------------------------------------
+  
+  - id: java-validation-missing-string
+    patterns:
+      - pattern-regex: '@RequestParam\s+String\s+\w+\s*\)|@PathVariable\s+String\s+\w+\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到字符串参数无验证。应添加 @NotBlank、@Size 或 @Pattern 等验证注解。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  - id: java-validation-missing-number
+    patterns:
+      - pattern-regex: '@RequestParam\s+(int|long|Integer|Long)\s+\w+\s*\)|@RequestParam\s+(double|Double|BigDecimal)\s+\w+\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到数值参数无验证。应添加 @Min、@Max 或 @DecimalMin 等范围验证。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  - id: java-validation-email-missing
+    patterns:
+      - pattern-regex: 'String\s+email|String\s+mail|email\s*;\s*String|mail\s*;\s*String'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到邮箱字段。应添加 @Email 或 @Pattern 验证邮箱格式。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  - id: java-validation-phone-missing
+    patterns:
+      - pattern-regex: 'String\s+(phone|mobile|tel|telephone)|phone\s*;\s*String|mobile\s*;\s*String'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到手机号字段。应添加 @Pattern 验证手机号格式（如 ^1[3-9]\\d{9}$）。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  - id: java-validation-idcard-missing
+    patterns:
+      - pattern-regex: 'String\s+(idCard|idcard|idNo|identityCard)|idCard\s*;\s*String'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到身份证号字段。应添加正则验证身份证格式（18位或15位）。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  # --------------------------------------------
+  # 验证绕过风险
+  # --------------------------------------------
+  
+  - id: java-validation-optional-bypass
+    patterns:
+      - pattern-regex: 'required\s*=\s*false.*@RequestParam|@RequestParam.*required\s*=\s*false'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到可选参数。可选参数若用于业务逻辑，仍需验证格式和内容。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-20"
+
+  - id: java-validation-jsonignore
+    patterns:
+      - pattern-regex: '@JsonIgnore|@JsonProperty\(access\s*=\s*JsonProperty\.Access\.WRITE_ONLY'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 @JsonIgnore 或只写属性。确保敏感字段不被序列化返回前端。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-200"
+
+  # ============================================
+  # 敏感数据处理规则 (P1 - High)
+  # ============================================
+  
+  # --------------------------------------------
+  # 密码处理
+  # --------------------------------------------
+  
+  - id: java-password-plaintext
+    patterns:
+      - pattern-regex: 'password\s*=\s*"[^"$]+"|password\s*=\s*\'[^\']+"|setPassword\s*\(\s*"[^"$]+"\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到密码明文赋值。密码应使用 BCrypt 等加密算法存储，禁止明文。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-256"
+
+  - id: java-password-compare-plaintext
+    patterns:
+      - pattern-regex: 'password\.equals\(|getPassword\(\)\.equals|\.equals\s*\(\s*password\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到密码明文比较。应使用 BCrypt.checkpw() 或 passwordEncoder.matches() 进行安全比较。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-256"
+
+  - id: java-password-in-url
+    patterns:
+      - pattern-regex: 'password\s*=\s*[^&\s]+[&\s]|jdbc:.*password\s*=\s*[^&\s]+|url.*password='
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+        - "*.yml"
+        - "*.yaml"
+        - "*.properties"
+    message: "检测到 URL 中包含密码。密码不应出现在 URL 中，可能被日志记录或泄露。"
+    severity: ERROR
+    languages: [generic, java]
+    metadata:
+      category: security
+      cwe: "CWE-598"
+
+  # --------------------------------------------
+  # 敏感信息打印
+  # --------------------------------------------
+  
+  - id: java-sensitive-print
+    patterns:
+      - pattern-regex: 'System\.out\.print.*password|System\.out\.print.*token|System\.out\.print.*key|System\.out\.print.*secret'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到敏感信息打印。密码、Token 等敏感信息不应打印到控制台。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-532"
+
+  - id: java-sensitive-tostring
+    patterns:
+      - pattern-regex: 'toString\(\).*password|toString\(\).*token|toString\(\).*secret|\"password.*\".*\+'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 toString() 包含敏感信息。敏感字段应在 toString() 中排除或脱敏。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-532"
+
+  # --------------------------------------------
+  # 身份证/银行卡处理
+  # --------------------------------------------
+  
+  - id: java-idcard-plaintext-storage
+    patterns:
+      - pattern-regex: 'setIdCard\s*\(\s*[^E][^N][^C]|idCard\s*=\s*request\.|setIdNo\s*\('
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到身份证号可能明文存储。身份证号应加密存储或脱敏。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-311"
+
+  - id: java-bankcard-plaintext
+    patterns:
+      - pattern-regex: 'bankCard\s*=\s*[^E][^N][^C]|setBankCard\s*\(\s*[^E]|cardNo\s*=\s*request'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到银行卡号可能明文存储。银行卡号应加密存储。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-311"
+
+  # ============================================
+  # 会话安全规则 (P1 - High)
+  # ============================================
+  
+  # --------------------------------------------
+  # Session 安全
+  # --------------------------------------------
+  
+  - id: java-session-attribute-sensitive
+    patterns:
+      - pattern-regex: 'session\.setAttribute\s*\(\s*"(password|pwd|secret|token|key)"'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到敏感信息存入 Session。密码等敏感信息不应存入 Session。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-315"
+
+  - id: java-session-id-logging
+    patterns:
+      - pattern-regex: 'log\..*sessionId|logger\..*sessionId|System\.out.*sessionId'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Session ID 日志记录。Session ID 不应记录日志，可能导致会话劫持。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-532"
+
+  - id: java-session-cookie-httponly-false
+    patterns:
+      - pattern-regex: 'setHttpOnly\s*\(\s*false|httpOnly\s*[=:]\s*false'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+        - "*.yml"
+        - "*.yaml"
+    message: "检测到 HttpOnly 设为 false。Cookie 应设置 HttpOnly=true，防止 XSS 窃取。"
+    severity: WARNING
+    languages: [generic, java]
+    metadata:
+      category: security
+      cwe: "CWE-1004"
+
+  - id: java-session-cookie-secure-false
+    patterns:
+      - pattern-regex: 'setSecure\s*\(\s*false|secure\s*[=:]\s*false'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+        - "*.yml"
+        - "*.yaml"
+    message: "检测到 Secure 设为 false。生产环境 Cookie 应设置 Secure=true，仅通过 HTTPS 传输。"
+    severity: WARNING
+    languages: [generic, java]
+    metadata:
+      category: security
+      cwe: "CWE-614"
+
+  # --------------------------------------------
+  # Token 安全
+  # --------------------------------------------
+  
+  - id: java-token-url-param
+    patterns:
+      - pattern-regex: '@RequestParam.*token|@PathVariable.*token|token=\$\{|\?token=|&token='
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Token 在 URL 参数中传递。Token 应通过 Header 或 Body 传递，URL 中的 Token 会被日志记录。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-598"
+
+  - id: java-token-hardcoded
+    patterns:
+      - pattern-regex: 'token\s*=\s*"[a-zA-Z0-9]{10,}"|setToken\s*\(\s*"[a-zA-Z0-9]{10,}"'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Token 硬编码。Token 应从配置或环境变量获取，禁止硬编码。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-798"
+
+  - id: java-token-compare-unsafe
+    patterns:
+      - pattern-regex: 'token\.equals\s*\(|getToken\(\)\.equals|\.equals\s*\(\s*token\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Token 使用 equals 比较。应使用 MessageDigest.isEqual() 或常量时间比较，防止时序攻击。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-208"
+
+  # ============================================
+  # 异常处理安全规则 (P2 - Medium)
+  # ============================================
+  
+  # --------------------------------------------
+  # 异常信息泄露
+  # --------------------------------------------
+  
+  - id: java-exception-stacktrace-expose
+    patterns:
+      - pattern-regex: 'e\.printStackTrace\s*\(\s*\)|printStackTrace\s*\(\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 printStackTrace() 调用。堆栈信息可能泄露敏感实现细节，应使用日志框架记录。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-209"
+
+  - id: java-exception-message-return
+    patterns:
+      - pattern-regex: 'return\s+e\.getMessage\s*\(\s*\)|return\s+"[^"]*"\s*\+\s*e\.getMessage|ResponseEntity\.ok\s*\(\s*e\.getMessage'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到异常消息直接返回前端。异常消息可能包含敏感信息，应返回通用错误提示。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-209"
+
+  - id: java-exception-catch-empty
+    patterns:
+      - pattern-regex: 'catch\s*\([^)]+\)\s*\{\s*\}|catch\s*\([^)]+\)\s*\{\s*//\s*\}'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到空 catch 块。异常被静默吞掉可能隐藏问题，至少应记录日志。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-392"
+
+  - id: java-exception-catch-exception
+    patterns:
+      - pattern-regex: 'catch\s*\(\s*Exception\s+\w+\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到捕获通用 Exception。应捕获具体异常类型，避免意外捕获 RuntimeException 或 Error。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-396"
+
+  - id: java-exception-return-success
+    patterns:
+      - pattern-regex: 'catch\s*\([^)]+\)\s*\{[^}]*return\s+(Result\.success|ResponseEntity\.ok|ResponseEntity\.status\(200\))'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到异常时返回成功状态。异常处理不应返回成功，可能导致调用方误判。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-392"
+
+  # ============================================
+  # 安全头配置规则 (P2 - Medium)
+  # ============================================
+  
+  - id: java-header-xss-protection-disabled
+    patterns:
+      - pattern-regex: 'X-XSS-Protection\s*[=:]\s*0|XSS-Protection.*disable'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+        - "*.yml"
+        - "*.yaml"
+    message: "检测到 XSS Protection 禁用。建议保留浏览器 XSS 过滤器作为纵深防御。"
+    severity: INFO
+    languages: [generic, java]
+    metadata:
+      category: security
+      cwe: "CWE-79"
+
+  - id: java-header-content-type-options-missing
+    patterns:
+      - pattern-regex: 'setHeader\s*\(\s*"Content-Type"|response\.setContentType'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Content-Type 设置。建议同时设置 X-Content-Type-Options: nosniff 防止 MIME 类型嗅探。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-436"
+
+  - id: java-header-hsts-missing
+    patterns:
+      - pattern-regex: 'server\.ssl\.enabled\s*[=:]\s*true'
+    paths:
+      include:
+        - "*.yml"
+        - "*.yaml"
+        - "*.properties"
+    message: "检测到 SSL 启用。建议配置 HSTS (Strict-Transport-Security) 强制 HTTPS。"
+    severity: INFO
+    languages: [generic]
+    metadata:
+      category: security
+      cwe: "CWE-319"
+
+  # ============================================
+  # 重定向安全规则 (P2 - Medium)
+  # ============================================
+  
+  - id: java-redirect-open
+    patterns:
+      - pattern-regex: 'sendRedirect\s*\(\s*request\.|sendRedirect\s*\(\s*[^"]*\+\s*|return\s+"redirect:.*"\s*\+\s*|RedirectView\s*\(\s*[^"]*\+\s*'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到开放重定向风险。重定向 URL 应验证白名单，避免钓鱼攻击。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-601"
+
+  - id: java-redirect-url-param
+    patterns:
+      - pattern-regex: '@RequestParam.*redirect|@RequestParam.*url|redirect_uri|redirectUrl|redirect_url'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到重定向参数。应对重定向 URL 进行白名单验证，避免开放重定向漏洞。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-601"
+
+  # ============================================
+  # 文件下载安全规则 (P1 - High)
+  # ============================================
+  
+  - id: java-file-download-path-traversal
+    patterns:
+      - pattern-regex: 'getFile\s*\(\s*@RequestParam|downloadFile\s*\(\s*@RequestParam.*[Ff]ile|new\s+File\s*\(\s*request\.'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到文件下载接口。应对文件路径进行验证，避免路径遍历读取任意文件。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-22"
+
+  - id: java-file-download-no-auth
+    patterns:
+      - pattern-regex: '@GetMapping.*download|downloadFile|exportFile|getFile'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到文件下载接口。下载接口应校验用户权限和数据归属。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
+
+  - id: java-file-response-type-missing
+    patterns:
+      - pattern-regex: 'response\.setContentType.*octet-stream|MediaType\.APPLICATION_OCTET_STREAM'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到文件下载使用 octet-stream。建议根据文件类型设置正确的 Content-Type，避免浏览器执行。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-434"

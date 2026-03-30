@@ -4,7 +4,7 @@
 
 **AI-Powered Java Security Audit Framework**
 
-[![Version](https://img.shields.io/badge/Version-1.3.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
+[![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
@@ -71,10 +71,13 @@ java-audit-skill/
 │   └── cve-offline-lookup.md   # 离线 CVE 速查表
 ├── scripts/
 │   ├── java_audit.py           # 审计辅助脚本（跨平台）
-│   ├── layer1-scan.sh          # Layer 1 危险模式预扫描
-│   ├── tier-classify.sh        # Tier 分级脚本
-│   └── coverage-check.sh       # 覆盖率门禁检查
-├── rules/semgrep/              # Semgrep 规则（198条）
+│   ├── layer1-scan.sh           # Layer 1 危险模式预扫描 (Linux/macOS)
+│   ├── layer1-scan.ps1          # Layer 1 危险模式预扫描 (Windows)
+│   ├── tier-classify.sh         # Tier 分级脚本 (Linux/macOS)
+│   ├── tier-classify.ps1        # Tier 分级脚本 (Windows)
+│   ├── coverage-check.sh        # 覆盖率门禁检查 (Linux/macOS)
+│   └── coverage-check.ps1       # 覆盖率门禁检查 (Windows)
+├── rules/semgrep/              # Semgrep 规则（365条）
 ├── examples/
 │   └── vulnerable-springboot/  # 完整审计报告示例
 └── assets/                     # 图表/流程图资源
@@ -260,7 +263,9 @@ Score = Base - Friction + Weapon + Ver
 | **信息泄露** | 敏感信息日志、错误信息暴露、配置文件泄露 | Semgrep |
 | **配置安全** | Debug 模式、Swagger 暴露、Actuator 暴露 | Semgrep + 配置分析 |
 
-**Semgrep 规则统计**: 198 条规则，覆盖 50+ 组件配置安全
+**Semgrep 规则统计**: 365 条规则，覆盖 70+ 组件配置安全
+
+**v1.5.0 新增覆盖**：LLM/AI 安全、GraphQL 安全、Kotlin 特有漏洞、Java 21 新特性、Spring Boot 3.x / Jakarta EE、微服务安全、NoSQL 注入、API 安全、输入验证、敏感数据处理、OWASP Top 10 2021 完整覆盖
 
 #### 依赖安全 - 版本分析
 

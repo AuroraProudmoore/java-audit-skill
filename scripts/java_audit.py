@@ -494,28 +494,82 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
     
     # 获取实际文件列表
     actual_files = set()
+    t1_files = set()  # Controller/Filter 文件
+    t2_files = set()  # Service/DAO 文件
+    t3_files = set()  # Entity/VO 文件
+    
     for root, dirs, files in os.walk(project_path):
         dirs[:] = [d for d in dirs if d not in ['target', 'node_modules', '.git', 'build', 'out', '.gradle', 'test', 'tests']]
         for file in files:
             if file.endswith(('.java', '.kt')):
                 actual_files.add(file)
+                file_path = os.path.join(root, file)
+                content = get_file_content(file_path)
+                tier = classify_tier(file_path, content)
+                if tier == "T1":
+                    t1_files.add(file)
+                elif tier == "T2":
+                    t2_files.add(file)
+                elif tier == "T3":
+                    t3_files.add(file)
     
     actual_count = len(actual_files)
+    t1_count = len(t1_files)
+    t2_count = len(t2_files)
+    t3_count = len(t3_files)
     
-    # 读取审阅清单
+    # 读取审阅清单 - 改进的文件路径识别
     reviewed_files = set()
+    reviewed_t1 = set()
+    reviewed_t2 = set()
+    reviewed_t3 = set()
+    
     if os.path.exists(reviewed_file):
         content = get_file_content(reviewed_file)
-        # 提取 .java 和 .kt 文件名
-        reviewed_files = set(re.findall(r'[a-zA-Z0-9_/-]+\.(java|kt)', content))
+        
+        # 方法1: 从 markdown 表格格式提取（优先）
+        # 匹配格式: | 1 | UserController.java | T1 | 完成 |
+        table_matches = re.findall(r'\|\s*\d*\s*\|\s*`?([a-zA-Z0-9_/-]+\.(java|kt))`?\s*\|\s*(T[123])', content)
+        for match in table_matches:
+            filename = match[0]
+            tier = match[2]
+            reviewed_files.add(filename)
+            if tier == "T1":
+                reviewed_t1.add(filename)
+            elif tier == "T2":
+                reviewed_t2.add(filename)
+            elif tier == "T3":
+                reviewed_t3.add(filename)
+        
+        # 方法2: 从代码块中的文件路径提取（备用）
+        if not reviewed_files:
+            # 匹配相对路径格式的文件引用
+            code_block_matches = re.findall(r'`([a-zA-Z0-9_/-]+\.(java|kt))`', content)
+            reviewed_files = set(code_block_matches)
+        
+        # 方法3: 从行首文件列表提取（最后备用）
+        if not reviewed_files:
+            # 匹配单独一行的文件路径
+            line_matches = re.findall(r'^\s*([a-zA-Z0-9_/-]+\.(java|kt))\s*$', content, re.MULTILINE)
+            reviewed_files = set(line_matches)
     
     reviewed_count = len(reviewed_files)
     
-    # 计算遗漏
+    # 分别计算各级别的覆盖率
+    t1_reviewed = len(reviewed_t1)
+    t2_reviewed = len(reviewed_t2)
+    t3_reviewed = len(reviewed_t3)
+    
+    t1_coverage = round(t1_reviewed / t1_count * 100, 1) if t1_count > 0 else 100
+    t2_coverage = round(t2_reviewed / t2_count * 100, 1) if t2_count > 0 else 100
+    t3_coverage = round(t3_reviewed / t3_count * 100, 1) if t3_count > 0 else 100
+    
+    # 计算总体遗漏
     missed_files = actual_files - reviewed_files
     missed_count = len(missed_files)
+    missed_t1 = t1_files - reviewed_t1
     
-    # 计算覆盖率
+    # 计算总体覆盖率
     coverage = round((actual_count - missed_count) / actual_count * 100, 1) if actual_count > 0 else 0
     
     # 输出结果
@@ -523,19 +577,34 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
     print(f"  实际文件总数: {actual_count}")
     print(f"  已审阅文件数: {reviewed_count}")
     print(f"  遗漏文件数: {missed_count}")
-    print(f"  覆盖率: {coverage}%")
+    print(f"  总体覆盖率: {coverage}%")
     
-    # 门禁判断
-    if coverage == 100:
-        print(f"\n[OK] 门禁通过 - 覆盖率 100%，可以进入 Phase 3")
+    print(f"\n[*] 分层覆盖率:")
+    print(f"  T1 (Controller/Filter): {t1_reviewed}/{t1_count} = {t1_coverage}%")
+    print(f"  T2 (Service/DAO): {t2_reviewed}/{t2_count} = {t2_coverage}%")
+    print(f"  T3 (Entity/VO): {t3_reviewed}/{t3_count} = {t3_coverage}%")
+    
+    # 门禁判断 - T1 必须 100% 覆盖
+    t1_passed = t1_coverage == 100
+    
+    if t1_passed and coverage >= 90:
+        print(f"\n[OK] 门禁通过 - T1 覆盖率 100%，总体覆盖率 {coverage}%")
+        passed = True
     else:
-        print(f"\n[!] 门禁未通过 - 覆盖率 < 100%，需要补扫")
-        if missed_count > 0:
-            print(f"\n[*] 遗漏文件列表 ({min(missed_count, 20)} 个):")
-            for f in list(missed_files)[:20]:
+        print(f"\n[!] 门禁未通过:")
+        if not t1_passed:
+            print(f"  - T1 文件覆盖率 {t1_coverage}% < 100%（必须 100%）")
+        if coverage < 90:
+            print(f"  - 总体覆盖率 {coverage}% < 90%")
+        
+        if missed_t1:
+            print(f"\n[*] 遗漏的 T1 文件（必须补扫）:")
+            for f in list(missed_t1)[:20]:
                 print(f"  - {f}")
-            if missed_count > 20:
-                print(f"  ... 还有 {missed_count - 20} 个文件")
+            if len(missed_t1) > 20:
+                print(f"  ... 还有 {len(missed_t1) - 20} 个文件")
+        
+        passed = False
     
     # 生成报告
     report_path = os.path.join(output_dir, "coverage-report.md")
@@ -548,20 +617,35 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
 | 实际文件总数 | {actual_count} |
 | 已审阅文件数 | {reviewed_count} |
 | 遗漏文件数 | {missed_count} |
-| **覆盖率** | **{coverage}%** |
+| **总体覆盖率** | **{coverage}%** |
+
+## 分层覆盖率
+
+| Tier | 文件数 | 已审阅 | 覆盖率 | 要求 | 状态 |
+|------|--------|--------|--------|------|------|
+| T1 (Controller/Filter) | {t1_count} | {t1_reviewed} | {t1_coverage}% | 100% | {"✅ 通过" if t1_coverage == 100 else "❌ 未通过"} |
+| T2 (Service/DAO) | {t2_count} | {t2_reviewed} | {t2_coverage}% | 95% | {"✅ 通过" if t2_coverage >= 95 else "⚠️ 需补扫"} |
+| T3 (Entity/VO) | {t3_count} | {t3_reviewed} | {t3_coverage}% | 80% | {"✅ 通过" if t3_coverage >= 80 else "⚠️ 需补扫"} |
 
 ## 门禁状态
 
-{"✅ **通过** - 覆盖率 100%，可以进入 Phase 3" if coverage == 100 else "❌ **未通过** - 覆盖率 < 100%，需要补扫"}
+{"✅ **通过** - T1 覆盖率 100%，总体覆盖率 ≥ 90%" if passed else "❌ **未通过** - T1 文件必须 100% 覆盖"}
 
 """
     
     if missed_count > 0:
         report_content += f"""## 遗漏文件列表
 
+### T1 遗漏文件（必须补扫）
 ```
-{chr(10).join(list(missed_files)[:50])}
-{'... 还有 ' + str(missed_count - 50) + ' 个文件' if missed_count > 50 else ''}
+{chr(10).join(list(missed_t1)[:50]) if missed_t1 else "无"}
+{"... 还有 " + str(len(missed_t1) - 50) + " 个文件" if len(missed_t1) > 50 else ""}
+```
+
+### 其他遗漏文件
+```
+{chr(10).join(list(missed_files - missed_t1)[:50])}
+{"... 还有 " + str(len(missed_files - missed_t1) - 50) + " 个文件" if len(missed_files - missed_t1) > 50 else ""}
 ```
 """
     
@@ -573,7 +657,10 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
         "reviewed_count": reviewed_count,
         "missed_count": missed_count,
         "coverage": coverage,
-        "passed": coverage == 100
+        "t1_coverage": t1_coverage,
+        "t2_coverage": t2_coverage,
+        "t3_coverage": t3_coverage,
+        "passed": passed
     }
 
 # ============================================

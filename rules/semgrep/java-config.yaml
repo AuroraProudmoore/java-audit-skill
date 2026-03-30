@@ -61,6 +61,7 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 Spring Security antMatchers 配置。antMatchers(\"/test\") 可被 /test/ (带斜杠) 绕过，因 Spring WebMVC 的 useTrailingSlashMatch 默认为 true。建议使用 mvcMatchers 或配置 useTrailingSlashMatch=false。"
     severity: WARNING
     languages: [java]
@@ -74,6 +75,7 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 Spring Security CSRF 保护已禁用。CSRF 保护可防止跨站请求伪造攻击。建议仅对无状态 API 禁用 CSRF。"
     severity: WARNING
     languages: [java]
@@ -87,6 +89,7 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 Spring Security permitAll 配置。permitAll 允许匿名访问，请确认是否为公开资源。敏感接口应使用 authenticated() 或 hasRole()。"
     severity: INFO
     languages: [java]
@@ -100,6 +103,7 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 Spring Security 使用 ** 通配符。CVE-2023-34034：双星号匹配可能导致认证绕过。建议使用 /** 或更精确的路径匹配。"
     severity: WARNING
     languages: [java]
@@ -115,6 +119,7 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 X-Frame-Options 已禁用。禁用后页面可被 iframe 嵌入，可能导致点击劫持攻击。建议保持默认 DENY 或 SAMEORIGIN。"
     severity: WARNING
     languages: [java]
@@ -128,12 +133,45 @@ rules:
     paths:
       include:
         - "*.java"
+        - "*.kt"
     message: "检测到 Session 固定防护已禁用。攻击者可利用 Session 固定攻击劫持用户会话。建议使用 sessionFixation().migrateSession() 或 newSession()。"
     severity: WARNING
     languages: [java]
     metadata:
       category: security
       cwe: "CWE-384"
+
+  # ============================================
+  # Spring Security 6.x 新特性规则
+  # ============================================
+  
+  - id: java-config-springsecurity6-authorizationHttpRequests
+    patterns:
+      - pattern-regex: 'authorizeHttpRequests\s*\(\s*\)\s*\.\s*(anyRequest|requestMatchers)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Spring Security 6.x authorizeHttpRequests 配置。请确保 anyRequest().authenticated() 在最后，避免认证绕过。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-287"
+
+  - id: java-config-springsecurity6-permitAll-lambda
+    patterns:
+      - pattern-regex: 'permitAll\s*\(\s*\)\s*;|\.permitAll\s*\(\s*\)\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Spring Security 6.x permitAll 配置。请确认该路径是否需要公开访问，敏感接口应使用 hasRole() 或 hasAuthority()。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
 
   # ============================================
   # P1 - 组件配置安全 - Spring Boot

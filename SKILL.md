@@ -141,26 +141,26 @@ python scripts/java_audit.py /path/to/project --scan
 
 ```bash
 # 识别资金交易接口
-grep -rn "pay\|payment\|refund\|transfer\|withdraw" --include="*.java" | grep -i "mapping"
+grep -rn "pay\|payment\|refund\|transfer\|withdraw" --include="*.java" --include="*.kt" | grep -i "mapping"
 
 # 识别特权操作接口
-grep -rn "@PreAuthorize.*ADMIN\|@Secured.*ADMIN\|hasRole.*ADMIN" --include="*.java"
+grep -rn "@PreAuthorize.*ADMIN\|@Secured.*ADMIN\|hasRole.*ADMIN" --include="*.java" --include="*.kt"
 
 # 识别公开访问接口
-grep -rn "permitAll\|anonymous" --include="*.java"
+grep -rn "permitAll\|anonymous" --include="*.java" --include="*.kt"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 # 识别资金交易接口
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "pay|payment|refund|transfer|withdraw" | Select-String -Pattern "mapping" -CaseSensitive:$false
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "pay|payment|refund|transfer|withdraw" | Select-String -Pattern "mapping" -CaseSensitive:$false
 
 # 识别特权操作接口
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@PreAuthorize.*ADMIN|@Secured.*ADMIN|hasRole.*ADMIN"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "@PreAuthorize.*ADMIN|@Secured.*ADMIN|hasRole.*ADMIN"
 
 # 识别公开访问接口
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "permitAll|anonymous"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "permitAll|anonymous"
 ```
 
 **详细说明**: [references/business-scenario-tags.md](references/business-scenario-tags.md)
@@ -233,51 +233,51 @@ Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "p
 **Linux/macOS (Bash):**
 
 ```bash
-# 反序列化全家族
-grep -rn "ObjectInputStream\|XMLDecoder\|XStream" --include="*.java"
-grep -rn "JSON\.parseObject\|JSON\.parse\|@type" --include="*.java"  # Fastjson
-grep -rn "enableDefaultTyping\|activateDefaultTyping" --include="*.java"  # Jackson
-grep -rn "HessianInput\|Hessian2Input" --include="*.java"  # Hessian
+# 反序列化全家族（同时检查 Java 和 Kotlin 文件）
+grep -rn "ObjectInputStream\|XMLDecoder\|XStream" --include="*.java" --include="*.kt"
+grep -rn "JSON\.parseObject\|JSON\.parse\|@type" --include="*.java" --include="*.kt"  # Fastjson
+grep -rn "enableDefaultTyping\|activateDefaultTyping" --include="*.java" --include="*.kt"  # Jackson
+grep -rn "HessianInput\|Hessian2Input" --include="*.java" --include="*.kt"  # Hessian
 
 # SSTI 全引擎
-grep -rn "Velocity\.evaluate\|VelocityEngine\|mergeTemplate" --include="*.java"
-grep -rn "freemarker\.template\|Template\.process\|FreeMarkerConfigurer" --include="*.java"
-grep -rn "SpringTemplateEngine\|TemplateEngine\.process" --include="*.java"  # Thymeleaf
+grep -rn "Velocity\.evaluate\|VelocityEngine\|mergeTemplate" --include="*.java" --include="*.kt"
+grep -rn "freemarker\.template\|Template\.process\|FreeMarkerConfigurer" --include="*.java" --include="*.kt"
+grep -rn "SpringTemplateEngine\|TemplateEngine\.process" --include="*.java" --include="*.kt"  # Thymeleaf
 
 # 表达式注入
-grep -rn "SpelExpressionParser\|parseExpression\|evaluateExpression" --include="*.java"
-grep -rn "OgnlUtil\|Ognl\.getValue\|ActionContext" --include="*.java"
+grep -rn "SpelExpressionParser\|parseExpression\|evaluateExpression" --include="*.java" --include="*.kt"
+grep -rn "OgnlUtil\|Ognl\.getValue\|ActionContext" --include="*.java" --include="*.kt"
 
 # JNDI 注入
-grep -rn "InitialContext\.lookup\|JdbcRowSetImpl\|setDataSourceName" --include="*.java"
+grep -rn "InitialContext\.lookup\|JdbcRowSetImpl\|setDataSourceName" --include="*.java" --include="*.kt"
 
 # 命令执行
-grep -rn "Runtime\.getRuntime\|ProcessBuilder\|exec(" --include="*.java"
+grep -rn "Runtime\.getRuntime\|ProcessBuilder\|exec(" --include="*.java" --include="*.kt"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-# 反序列化全家族
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "ObjectInputStream|XMLDecoder|XStream"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "JSON\.parseObject|JSON\.parse|@type"  # Fastjson
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "enableDefaultTyping|activateDefaultTyping"  # Jackson
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "HessianInput|Hessian2Input"  # Hessian
+# 反序列化全家族（同时检查 Java 和 Kotlin 文件）
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "ObjectInputStream|XMLDecoder|XStream"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "JSON\.parseObject|JSON\.parse|@type"  # Fastjson
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "enableDefaultTyping|activateDefaultTyping"  # Jackson
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "HessianInput|Hessian2Input"  # Hessian
 
 # SSTI 全引擎
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "Velocity\.evaluate|VelocityEngine|mergeTemplate"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "freemarker\.template|Template\.process|FreeMarkerConfigurer"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "SpringTemplateEngine|TemplateEngine\.process"  # Thymeleaf
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "Velocity\.evaluate|VelocityEngine|mergeTemplate"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "freemarker\.template|Template\.process|FreeMarkerConfigurer"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "SpringTemplateEngine|TemplateEngine\.process"  # Thymeleaf
 
 # 表达式注入
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "SpelExpressionParser|parseExpression|evaluateExpression"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "OgnlUtil|Ognl\.getValue|ActionContext"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "SpelExpressionParser|parseExpression|evaluateExpression"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "OgnlUtil|Ognl\.getValue|ActionContext"
 
 # JNDI 注入
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "InitialContext\.lookup|JdbcRowSetImpl|setDataSourceName"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "InitialContext\.lookup|JdbcRowSetImpl|setDataSourceName"
 
 # 命令执行
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "Runtime\.getRuntime|ProcessBuilder|exec\("
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "Runtime\.getRuntime|ProcessBuilder|exec\("
 ```
 
 #### P1 级危险模式（SQL 注入/SSRF/文件操作）
@@ -286,30 +286,30 @@ Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "R
 
 ```bash
 # SQL 注入风险
-grep -rn "Statement\|createStatement\|executeQuery\|executeUpdate" --include="*.java"
+grep -rn "Statement\|createStatement\|executeQuery\|executeUpdate" --include="*.java" --include="*.kt"
 grep -rn '\$\{' --include="*.xml"  # MyBatis ${} 注入
 
 # SSRF
-grep -rn "URL\(|HttpURLConnection\|HttpClient\|RestTemplate\|WebClient" --include="*.java"
+grep -rn "URL\(|HttpURLConnection\|HttpClient\|RestTemplate\|WebClient" --include="*.java" --include="*.kt"
 
 # 文件操作
-grep -rn "FileInputStream\|FileOutputStream\|FileWriter\|Files\.read\|Files\.write" --include="*.java"
-grep -rn "getOriginalFilename\|transferTo\|MultipartFile" --include="*.java"  # 文件上传
+grep -rn "FileInputStream\|FileOutputStream\|FileWriter\|Files\.read\|Files\.write" --include="*.java" --include="*.kt"
+grep -rn "getOriginalFilename\|transferTo\|MultipartFile" --include="*.java" --include="*.kt"  # 文件上传
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 # SQL 注入风险
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "Statement|createStatement|executeQuery|executeUpdate"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.xml).FullName -Pattern '\$\{'  # MyBatis ${} 注入
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "Statement|createStatement|executeQuery|executeUpdate"
+Get-ChildItem -Recurse -Include *.xml | Select-String -Pattern '\$\{'  # MyBatis ${} 注入
 
 # SSRF
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "URL\(|HttpURLConnection|HttpClient|RestTemplate|WebClient"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "URL\(|HttpURLConnection|HttpClient|RestTemplate|WebClient"
 
 # 文件操作
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "FileInputStream|FileOutputStream|FileWriter|Files\.read|Files\.write"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "getOriginalFilename|transferTo|MultipartFile"  # 文件上传
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "FileInputStream|FileOutputStream|FileWriter|Files\.read|Files\.write"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "getOriginalFilename|transferTo|MultipartFile"  # 文件上传
 ```
 
 #### P2 级危险模式（认证/授权/加密）
@@ -318,22 +318,22 @@ Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "g
 
 ```bash
 # 认证相关
-grep -rn "@PreAuthorize\|@Secured\|@RolesAllowed\|hasRole\|hasAuthority" --include="*.java"
-grep -rn "permitAll\|anonymous\|authenticated" --include="*.java"
+grep -rn "@PreAuthorize\|@Secured\|@RolesAllowed\|hasRole\|hasAuthority" --include="*.java" --include="*.kt"
+grep -rn "permitAll\|anonymous\|authenticated" --include="*.java" --include="*.kt"
 
 # 加密相关
-grep -rn "MessageDigest\|Cipher\|SecretKey\|PasswordEncoder" --include="*.java"
+grep -rn "MessageDigest\|Cipher\|SecretKey\|PasswordEncoder" --include="*.java" --include="*.kt"
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
 # 认证相关
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@PreAuthorize|@Secured|@RolesAllowed|hasRole|hasAuthority"
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "permitAll|anonymous|authenticated"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "@PreAuthorize|@Secured|@RolesAllowed|hasRole|hasAuthority"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "permitAll|anonymous|authenticated"
 
 # 加密相关
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "MessageDigest|Cipher|SecretKey|PasswordEncoder"
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "MessageDigest|Cipher|SecretKey|PasswordEncoder"
 ```
 
 ### Layer 2: 双轨审计模型
@@ -528,11 +528,11 @@ python scripts/java_audit.py /path/to/project --coverage --reviewed-file finding
 
 ### 门禁阈值
 
-| 项目规模 | EALOC | 覆盖率要求 | 说明 |
-|----------|-------|------------|------|
-| 小型项目 | < 15,000 | 100% | 完整覆盖 |
-| 中型项目 | 15,000 - 50,000 | 95% | 允许少量遗漏，但必须补扫 T1 文件 |
-| 大型项目 | > 50,000 | 90% | 允许合理遗漏，T1 文件必须 100% 覆盖 |
+| 项目规模 | EALOC | 总体覆盖率 | T1 覆盖率 | T2 覆盖率 | T3 覆盖率 |
+|----------|-------|------------|-----------|-----------|-----------|
+| 小型项目 | < 15,000 | 100% | **100%** | 95% | 90% |
+| 中型项目 | 15,000 - 50,000 | 95% | **100%** | 95% | 85% |
+| 大型项目 | > 50,000 | 90% | **100%** | 90% | 80% |
 
 **T1 文件（Controller/Filter）必须 100% 覆盖，无例外。**
 
@@ -677,17 +677,25 @@ semgrep --version
 **快速扫描**：
 
 ```bash
-# 扫描所有规则
+# 扫描所有规则（含新增的新兴技术安全规则）
 semgrep --config rules/semgrep/ /path/to/project
 
 # 仅扫描 P0 级规则
 semgrep --config rules/semgrep/java-rce.yaml /path/to/project
+semgrep --config rules/semgrep/java-emerging.yaml /path/to/project
 
 # 输出 JSON 格式
 semgrep --config rules/semgrep/ --json /path/to/project > semgrep-results.json
 ```
 
-**规则列表**：见 [rules/semgrep/README.md](rules/semgrep/README.md)，共 198 条规则覆盖 RCE、SQL注入、SSRF、文件操作、加密、配置安全等。
+**规则列表**：见 [rules/semgrep/README.md](rules/semgrep/README.md)，共 365 条规则覆盖：
+- **传统漏洞**：RCE、SQL注入、SSRF、文件操作、加密、配置安全等
+- **新兴技术**：LLM/AI 安全、GraphQL、Kotlin 特有漏洞、Java 21 新特性
+- **微服务安全**：Feign、Gateway、Dubbo、gRPC、Istio、NoSQL 注入
+- **框架安全**：Spring Security 5/6、Spring Boot 3.x、Jakarta EE
+- **API 安全**：REST API 安全、参数验证、敏感数据处理、会话安全
+- **业务安全**：并发安全、幂等性检查、JWT 增强、CORS 增强
+- **OWASP Top 10 2021**：完整覆盖 10 大风险类别
 
 ### 执行条件
 
@@ -976,6 +984,23 @@ AI 先构建业务的因果关系基准与状态机模型，明确每个业务�
 | [logic-vulnerability-cot.md](references/logic-vulnerability-cot.md) | 逻辑漏洞 CoT 四步推理流程 |
 | [business-scenario-tags.md](references/business-scenario-tags.md) | 业务场景标签系统 |
 | [security-checklist.md](references/security-checklist.md) | Java Web 应用安全审计检查清单 |
+
+### Semgrep 规则文件
+
+| 文件 | 覆盖内容 | 规则数 |
+|------|----------|--------|
+| [java-rce.yaml](rules/semgrep/java-rce.yaml) | 反序列化、SSTI、表达式注入、命令注入 | 21 |
+| [java-sqli.yaml](rules/semgrep/java-sqli.yaml) | SQL 注入、MyBatis ${} 注入 | 12 |
+| [java-ssrf.yaml](rules/semgrep/java-ssrf.yaml) | SSRF 漏洞 | 8 |
+| [java-file.yaml](rules/semgrep/java-file.yaml) | 文件操作漏洞 | 14 |
+| [java-crypto.yaml](rules/semgrep/java-crypto.yaml) | 加密算法安全 | 8 |
+| [java-misc.yaml](rules/semgrep/java-misc.yaml) | XXE、XSS、认证授权等 | 56 |
+| [java-config.yaml](rules/semgrep/java-config.yaml) | 组件配置安全（60+ 组件） | 95 |
+| [java-emerging.yaml](rules/semgrep/java-emerging.yaml) | LLM/AI、GraphQL、Kotlin、Java 21、并发安全 | 45 |
+| [java-microservice.yaml](rules/semgrep/java-microservice.yaml) | 微服务、NoSQL 注入、反序列化利用链、OWASP Top 10 | 52 |
+| [java-api-security.yaml](rules/semgrep/java-api-security.yaml) | API 安全、输入验证、敏感数据、会话安全、异常处理 | 54 |
+
+**总计 365 条规则**
 
 ### 示例项目
 

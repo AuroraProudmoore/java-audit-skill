@@ -12,10 +12,12 @@
 | `java-file.yaml` | P1 (High) | 14 | 路径遍历、任意文件读写/删除/重命名、文件上传、目录遍历 |
 | `java-crypto.yaml` | P2 (Medium) | 8 | 弱加密算法、弱哈希算法、不安全随机数、硬编码密钥、SSL 禁用 |
 | `java-misc.yaml` | P1/P2 | 56 | XXE、XSS、敏感数据泄露、认证授权、会话管理、日志安全、配置安全、接口安全、开放重定向、LDAP注入、EL注入、JDBC Attack、内存马、拒绝服务 |
-| `java-config.yaml` | P0/P1/P2 | 85 | **组件配置安全**：Log4j2、Spring Security、Spring Boot Actuator、Shiro、Swagger/Knife4j、Druid、Fastjson、Jackson、Nacos、Sentinel、Dubbo、Tomcat、Redis、MongoDB、RabbitMQ、Kafka、JPA/Hibernate、XXL-JOB、Apollo、Eureka、Spring Cloud Gateway、Zuul、Consul、Zookeeper、RocketMQ、ActiveMQ、MinIO/OSS、JWT、OAuth2、GraphQL、gRPC、WebFlux、Memcached、Solr、Velocity、FreeMarker、Thymeleaf、Drools、Activiti/Flowable、SnakeYAML、XStream、Hessian、H2 等 50+ 组件 |
-| `java-misc.yaml` | P1/P2 | 53 | XXE、XSS、敏感数据泄露、认证授权、会话管理、日志安全、配置安全、接口安全、开放重定向、LDAP注入、EL注入、JDBC Attack、内存马、拒绝服务、反序列化 |
+| `java-config.yaml` | P0/P1/P2 | 95 | **组件配置安全**：Log4j2、Spring Security 5/6、Spring Boot Actuator、Shiro、Swagger/Knife4j、Druid、Fastjson、Jackson、Nacos、Sentinel、Dubbo、Tomcat、Redis、MongoDB、RabbitMQ、Kafka、JPA/Hibernate、XXL-JOB、Apollo、Eureka、Spring Cloud Gateway、Zuul、Consul、Zookeeper、RocketMQ、ActiveMQ、MinIO/OSS、JWT、OAuth2、GraphQL、gRPC、WebFlux、Memcached、Solr、Velocity、FreeMarker、Thymeleaf、Drools、Activiti/Flowable、SnakeYAML、XStream、Hessian、H2、Jakarta EE 等 60+ 组件 |
+| `java-emerging.yaml` | P0/P1/P2 | 45 | **新兴技术安全**：LLM/AI 安全（Prompt 注入、API Key 泄露）、GraphQL 安全、Kotlin 特有漏洞、Java 21 新特性、Virtual Threads、并发安全、幂等性检查、Fastjson 2.x、JWT 增强、CORS 增强 |
+| `java-microservice.yaml` | P0/P1/P2 | 52 | **微服务与数据库安全**：Feign、Spring Cloud Gateway、Dubbo、gRPC、Istio、NoSQL 注入（MongoDB、Elasticsearch、Redis）、数据库连接安全、反序列化利用链增强、OWASP Top 10 2021 完整覆盖 |
+| `java-api-security.yaml` | P1/P2 | 54 | **API 安全与输入验证**：REST API 安全、参数验证、敏感数据处理、会话安全、Token 安全、异常处理、安全头配置、重定向安全、文件下载安全 |
 
-**总计**: 198 条规则
+**总计**: 365 条规则
 
 ## 规则详情
 
@@ -174,6 +176,137 @@
 | `java-api-request-size-unlimited` | 请求大小无限制 | WARNING |
 | `java-ssl-disabled` | SSL 验证禁用 | ERROR |
 
+### java-microservice.yaml (P0/P1/P2 - 微服务与数据库安全)
+
+#### 微服务安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-feign-no-auth` | Feign 服务间无认证 | WARNING |
+| `java-feign-url-hardcoded` | Feign URL 硬编码 | INFO |
+| `java-feign-insecure-ssl` | Feign SSL 禁用 | ERROR |
+| `java-gateway-route-no-auth` | Gateway 路由无认证 | WARNING |
+| `java-gateway-filter-bypass` | Gateway 过滤器绕过 | WARNING |
+| `java-dubbo-protocol-unsafe` | Dubbo 协议安全 | WARNING |
+| `java-dubbo-token-missing` | Dubbo Token 缺失 | WARNING |
+| `java-grpc-insecure-channel` | gRPC 明文通道 | WARNING |
+| `java-istio-mtls-disabled` | Istio mTLS 禁用 | WARNING |
+
+#### NoSQL 注入
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-mongodb-injection` | MongoDB 注入 | ERROR |
+| `java-mongodb-where-clause` | MongoDB $where 注入 | ERROR |
+| `java-elasticsearch-injection` | Elasticsearch 注入 | ERROR |
+| `java-redis-command-injection` | Redis 命令注入 | WARNING |
+
+#### 数据库连接安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-datasource-credentials-hardcoded` | 数据库凭证硬编码 | ERROR |
+| `java-mysql-ssl-disabled` | MySQL SSL 禁用 | WARNING |
+| `java-postgres-ssl-disabled` | PostgreSQL SSL 禁用 | WARNING |
+
+#### 反序列化利用链增强
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-deserialization-gadget-commons-beanutils` | CB 利用链 | WARNING |
+| `java-deserialization-gadget-rome` | ROME 利用链 | WARNING |
+| `java-deserialization-gadget-c3p0` | C3P0 利用链 | WARNING |
+| `java-deserialization-gadget-aspectjweaver` | AspectJWeaver 利用链 | WARNING |
+
+#### OWASP Top 10 2021 完整覆盖
+
+| 规则 ID | 漏洞类型 | OWASP 分类 |
+|---------|----------|------------|
+| `java-access-control-path-bypass` | 路径访问控制绕过 | A01:2021 |
+| `java-crypto-hardcoded-iv` | 硬编码 IV | A02:2021 |
+| `java-crypto-ecb-mode` | AES ECB 模式 | A02:2021 |
+| `java-sql-order-by-injection` | ORDER BY 注入 | A03:2021 |
+| `java-sql-like-injection` | LIKE 子句注入 | A03:2021 |
+| `java-design-missing-rate-limit` | 缺少限流 | A04:2021 |
+| `java-config-error-verbose` | 详细错误信息 | A05:2021 |
+| `java-dependency-snapshot-vulnerable` | 不安全版本声明 | A06:2021 |
+| `java-auth-session-fixation` | 会话固定 | A07:2021 |
+| `java-auth-weak-password-policy` | 弱密码策略 | A07:2021 |
+| `java-integrity-autoType-enabled` | AutoType 开启 | A08:2021 |
+| `java-logging-sensitive-data` | 敏感信息日志 | A09:2021 |
+| `java-logging-missing-audit` | 缺少审计日志 | A09:2021 |
+| `java-ssrf-url-validation-missing` | SSRF URL 验证缺失 | A10:2021 |
+
+### java-api-security.yaml (P1/P2 - API 安全与输入验证)
+
+#### REST API 安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-api-delete-no-auth` | DELETE 接口无认证 | WARNING |
+| `java-api-put-no-auth` | PUT 接口无认证 | WARNING |
+| `java-api-batch-operation-no-limit` | 批量操作无限制 | WARNING |
+| `java-api-no-idempotency-key` | 缺少幂等性控制 | WARNING |
+| `java-api-response-sensitive-data` | 敏感数据返回 | ERROR |
+| `java-api-pagination-no-limit` | 分页无限制 | WARNING |
+| `java-api-version-in-url` | API 版本控制 | INFO |
+| `java-api-docs-exposed` | API 文档暴露 | WARNING |
+
+#### 参数验证缺失
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-validation-missing-string` | 字符串参数无验证 | WARNING |
+| `java-validation-missing-number` | 数值参数无验证 | WARNING |
+| `java-validation-email-missing` | 邮箱格式未验证 | INFO |
+| `java-validation-phone-missing` | 手机号格式未验证 | INFO |
+| `java-validation-idcard-missing` | 身份证格式未验证 | INFO |
+| `java-validation-optional-bypass` | 可选参数验证绕过 | INFO |
+
+#### 敏感数据处理
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-password-plaintext` | 密码明文 | ERROR |
+| `java-password-compare-plaintext` | 密码明文比较 | ERROR |
+| `java-password-in-url` | URL 包含密码 | ERROR |
+| `java-sensitive-print` | 敏感信息打印 | ERROR |
+| `java-sensitive-tostring` | toString 包含敏感信息 | WARNING |
+| `java-idcard-plaintext-storage` | 身份证明文存储 | WARNING |
+| `java-bankcard-plaintext` | 银行卡明文存储 | WARNING |
+
+#### 会话与 Token 安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-session-attribute-sensitive` | Session 存敏感信息 | ERROR |
+| `java-session-id-logging` | Session ID 日志 | WARNING |
+| `java-session-cookie-httponly-false` | HttpOnly=false | WARNING |
+| `java-session-cookie-secure-false` | Secure=false | WARNING |
+| `java-token-url-param` | Token 在 URL 中 | WARNING |
+| `java-token-hardcoded` | Token 硬编码 | ERROR |
+| `java-token-compare-unsafe` | Token 时序攻击 | WARNING |
+
+#### 异常处理安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-exception-stacktrace-expose` | 堆栈信息泄露 | WARNING |
+| `java-exception-message-return` | 异常消息返回 | WARNING |
+| `java-exception-catch-empty` | 空 catch 块 | WARNING |
+| `java-exception-catch-exception` | 捕获通用 Exception | INFO |
+| `java-exception-return-success` | 异常返回成功 | WARNING |
+
+#### 重定向与文件下载安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-redirect-open` | 开放重定向 | WARNING |
+| `java-redirect-url-param` | 重定向 URL 参数 | WARNING |
+| `java-file-download-path-traversal` | 文件下载路径遍历 | ERROR |
+| `java-file-download-no-auth` | 文件下载无认证 | WARNING |
+| `java-file-response-type-missing` | 文件响应类型缺失 | INFO |
+
 ## 使用方法
 
 ### 安装 Semgrep
@@ -234,6 +367,90 @@ jobs:
 |----------|------|----------|
 | ERROR | 确认存在漏洞，需立即修复 | 24h 内 |
 | WARNING | 疑似漏洞或潜在风险，需人工确认 | 7 天内 |
+
+### java-emerging.yaml (P0/P1/P2 - 新兴技术安全)
+
+#### LLM/AI 安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-llm-apikey-hardcoded` | LLM API Key 硬编码 | ERROR |
+| `java-llm-prompt-injection` | Prompt 注入 | ERROR |
+| `java-llm-langchain-agent-unrestricted` | LangChain Agent 无限制 | WARNING |
+| `java-llm-output-unsafe` | LLM 输出未验证 | INFO |
+
+#### GraphQL 安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-graphql-introspection-enabled` | Introspection 开启 | WARNING |
+| `java-graphql-depth-limit-missing` | 无深度限制 | WARNING |
+| `java-graphql-batch-limit-missing` | 无批量限制 | INFO |
+| `java-graphql-field-suggestion-enabled` | 字段建议开启 | INFO |
+
+#### Kotlin 特有漏洞
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `kotlin-null-safety-bypass` | !! 操作符绕过空安全 | WARNING |
+| `kotlin-coroutine-unsafe-globalscope` | GlobalScope 使用 | WARNING |
+| `kotlin-coroutine-runblocking` | runBlocking 使用 | INFO |
+| `kotlin-insecure-random` | 非安全随机数 | WARNING |
+| `kotlin-unsafe-cast` | 强制类型转换 | INFO |
+
+#### Java 21 新特性
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java21-virtual-thread-pinned` | Virtual Thread pinned | WARNING |
+| `java21-foreign-function-unsafe` | FFI 内存操作 | WARNING |
+| `java21-pattern-matching-exhaustive` | switch 覆盖检查 | INFO |
+
+#### Jakarta EE / Spring Boot 3.x
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `jakarta-servlet-filter-config` | Servlet Filter 配置 | INFO |
+| `jakarta-persistence-sqli` | JPA SQL 注入风险 | WARNING |
+| `jakarta-validation-missing` | 输入验证缺失 | INFO |
+| `springboot3-native-image-reflection` | Native Image 反射 | INFO |
+
+#### 并发安全
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-concurrent-threadpool-unbounded` | 无界线程池 | WARNING |
+| `java-concurrent-race-condition` | 竞态条件 | WARNING |
+| `java-concurrent-threadlocal-leak` | ThreadLocal 泄露 | WARNING |
+
+#### 幂等性检查
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-idempotency-missing-payment` | 支付接口幂等性 | WARNING |
+| `java-idempotency-missing-order` | 下单接口幂等性 | INFO |
+
+#### Fastjson 2.x
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-fastjson2-unsafe-config` | Fastjson 2.x AutoType | ERROR |
+| `java-fastjson2-version-check` | Fastjson 2.x 版本检查 | WARNING |
+
+#### JWT 安全增强
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-jwt-weak-secret-enhanced` | JWT 弱密钥增强检测 | ERROR |
+| `java-jwt-no-expiration` | JWT 无过期时间 | WARNING |
+| `java-jwt-alg-none` | JWT alg=none | ERROR |
+
+#### CORS 安全增强
+
+| 规则 ID | 漏洞类型 | 严重程度 |
+|---------|----------|----------|
+| `java-cors-credentials-wildcard` | CORS * + Credentials | ERROR |
+| `java-cors-exposed-headers-sensitive` | 暴露敏感头 | WARNING |
 
 ## 自定义规则
 
