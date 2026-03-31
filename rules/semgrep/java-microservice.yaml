@@ -63,7 +63,7 @@ rules:
         - "*.properties"
     message: "检测到 Gateway 路由配置。建议配置全局过滤器进行认证授权，避免后端服务直接暴露。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -78,7 +78,7 @@ rules:
         - "*.java"
     message: "检测到 Gateway 移除认证头过滤器。可能导致后端服务无法获取认证信息，需确认是否安全。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-287"
@@ -93,7 +93,7 @@ rules:
         - "*.java"
     message: "检测到 Gateway CORS 允许所有来源。建议指定具体域名，防止跨站请求伪造。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-942"
@@ -110,9 +110,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 Eureka Server URL 包含明文认证信息。建议使用环境变量：${EUREKA_USER}:${EUREKA_PASSWORD}@host"
+    message: "检测到 Eureka Server URL 包含明文认证信息。建议使用环境变量：VAR_EUREKA_USER:VAR_EUREKA_PASSWORD@host"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -127,7 +127,7 @@ rules:
         - "*.properties"
     message: "检测到 Ribbon 服务列表硬编码。建议使用服务发现，避免 IP 泄露和配置硬编码。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -147,7 +147,7 @@ rules:
         - "*.xml"
     message: "检测到 Dubbo 协议配置。Hessian/Java 序列化存在反序列化风险，建议使用泛化调用或安全序列化。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -162,7 +162,7 @@ rules:
         - "*.properties"
     message: "检测到 Dubbo Token 验证关闭。建议开启 Token 验证防止未授权调用。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -212,21 +212,21 @@ rules:
         - "*.yml"
     message: "检测到 Istio mTLS 禁用或宽松模式。建议使用 STRICT 模式确保服务间通信加密。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-319"
 
   - id: java-istio-authorization-policy-missing
     patterns:
-      - pattern-regex: 'apiVersion:\s*security\.istio\.io/v1beta1\s*\nkind:\s*AuthorizationPolicy'
+      - pattern-regex: 'apiVersion:\s*security\.istio\.io/v1beta1\s* kind:\s*AuthorizationPolicy'
     paths:
       include:
         - "*.yaml"
         - "*.yml"
     message: "检测到 Istio AuthorizationPolicy。请确保策略覆盖所有敏感服务。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-284"
@@ -311,7 +311,7 @@ rules:
         - "*.properties"
     message: "检测到数据库凭证硬编码。建议使用环境变量或密钥管理服务。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -327,7 +327,7 @@ rules:
         - "*.java"
     message: "检测到 MySQL SSL 禁用。数据库连接应启用 SSL 加密。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-319"
@@ -343,7 +343,7 @@ rules:
         - "*.java"
     message: "检测到 PostgreSQL SSL 禁用或证书验证关闭。数据库连接应启用 SSL 加密。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-319"
@@ -362,7 +362,7 @@ rules:
         - "pom.xml"
     message: "检测到 Commons BeanUtils BeanComparator。这是已知反序列化利用链，建议检查依赖版本和使用场景。"
     severity: WARNING
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -379,7 +379,7 @@ rules:
         - "pom.xml"
     message: "检测到 ROME 库 ToStringBean。这是已知反序列化利用链，建议检查依赖版本。"
     severity: WARNING
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -394,7 +394,7 @@ rules:
         - "pom.xml"
     message: "检测到 C3P0 数据源。C3P0 存在 JNDI 注入利用链，建议检查配置和依赖版本。"
     severity: WARNING
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -408,7 +408,7 @@ rules:
         - "*.gradle"
     message: "检测到 AspectJWeaver 依赖。存在文件写入利用链，建议检查依赖版本。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -472,14 +472,14 @@ rules:
         - "*.xml"
     message: "检测到 ORDER BY 动态拼接。排序字段应使用白名单验证，避免 SQL 注入。"
     severity: ERROR
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-89"
 
   - id: java-sql-like-injection
     patterns:
-      - pattern-regex: 'LIKE\s*"%"\s*\+\s*|LIKE\s*\'%\'\s*\+\s*|like.*\$\{.*\}%'
+      - pattern-regex: "LIKE\\s*\"%\"\\s*\\+|like.*\\$\\{"
     paths:
       include:
         - "*.java"
@@ -487,7 +487,7 @@ rules:
         - "*.xml"
     message: "检测到 LIKE 子句动态拼接。通配符拼接可能导致 SQL 注入，建议使用参数绑定。"
     severity: WARNING
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-89"
@@ -518,7 +518,7 @@ rules:
         - "*.properties"
     message: "检测到详细错误信息配置。生产环境不应返回完整堆栈信息，可能泄露敏感实现细节。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-209"
@@ -532,7 +532,7 @@ rules:
         - "pom.xml"
     message: "检测到不安全的版本声明。避免使用 SNAPSHOT、RELEASE 或固定旧版本，应使用明确的稳定版本。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-1104"
@@ -578,7 +578,7 @@ rules:
         - "*.yaml"
     message: "检测到 AutoType 开启。AutoType 可能导致反序列化 RCE，建议使用白名单或关闭。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"

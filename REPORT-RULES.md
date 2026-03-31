@@ -71,8 +71,19 @@ Score = Base - Friction + Weapon + Ver
 ### 9. 漏洞成立条件判断（必须按流程）
 参考 `references/vulnerability-conditions.md`，不能看到危险函数就报漏洞。
 
-### 10. 依赖安全检查（必须联网搜索）
-发现危险依赖版本，必须使用 web_search 验证是否存在 CVE。
+### 10. 依赖安全检查（必须使用 tavily 联网搜索）
+发现危险依赖版本，必须使用 **tavily** 验证是否存在 CVE：
+
+```bash
+# 使用 tavily 搜索 CVE 信息
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE" -n 10
+
+# 示例
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "fastjson 1.2.79 vulnerability" -n 10
+```
+
+**禁止使用 web_search（Brave API 未配置）**，禁止凭记忆编造 CVE 编号。
 
 ### 11. CoT 四步推理（逻辑漏洞必须执行）
 ```
@@ -82,6 +93,23 @@ Step 3: 对抗性沙箱模拟
 Step 4: 漏洞结果判定
 ```
 **逻辑漏洞必须执行四步推理，记录推理过程！**
+
+### 12. CVE 编号核实（禁止编造）
+**所有 CVE 编号必须联网核实**：
+- 从 NVD、Snyk、官方公告确认真实性
+- 确认影响版本范围
+- 确认 CVE 影响的具体组件（artifact）
+
+```
+❌ 错误: CVE-2020-1948 是 Hessian 漏洞
+✅ 正确: CVE-2020-1948 是 Apache Dubbo 漏洞（经 NVD 核实）
+```
+
+### 13. 行号验证（禁止模糊范围）
+**所有行号必须用 Read 验证**：
+- grep 搜索后用 Read 确认实际行号
+- 禁止模糊范围（如 `18-35`）
+- 精确到方法起始行（如 `35` 或 `252-253, 321`）
 
 ---
 
@@ -137,9 +165,51 @@ Step 4: 漏洞结果判定
 
 1. **行号精确**：禁止模糊范围，必须用 Read/Select-String 验证
 2. **代码真实**：必须来自实际 Read 输出，不得编造
-3. **分析深度**：L3 级别（含对比分析、调用链、未使用安全机制）
+3. **分析深度**：L4 级别（1500字以上，含调用链、对比分析、攻击路径、未使用安全机制）
 4. **输出路径**：项目路径 = 报告路径，不允许输出到其他位置
 5. **分析格式**：禁止写成三点式，必须按照样例格式书写
+6. **CVE 核实**：必须使用 tavily 联网核实，禁止凭记忆编造
+7. **依赖安全**：必须使用 tavily 搜索 CVE，禁止靠想象
+8. **代码位置**：必须使用完整绝对路径，禁止只写文件名
+
+## 报告格式禁忌
+
+### 1. 禁止在标题中添加严重程度标签
+
+```markdown
+❌ 错误：
+### 任意文件上传漏洞（Critical）
+
+✅ 正确：
+### 任意文件上传漏洞
+```
+
+### 2. 禁止在漏洞详情前添加元信息块
+
+```markdown
+❌ 错误：
+#### 漏洞详情
+
+**漏洞位置**: CommonController.java:49-62
+**漏洞类型**: CWE-434: 危险类型文件上传
+**DKTSS评分**: 8.5
+
+**代码位置**：
+...
+
+✅ 正确：
+#### 漏洞详情
+
+**代码位置**：
+`CommonController.java:49-62`
+...
+```
+
+### 3. 禁止片面分析
+
+分析必须包含：具体方法名、调用链追踪、缺少的安全控制、对比分析、攻击路径、漏洞类型归纳。
+
+详见 [references/report-template.md](references/report-template.md)
 
 ## 分析深度要求（最重要！）
 

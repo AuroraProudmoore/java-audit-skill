@@ -58,7 +58,7 @@ rules:
         - "*.xml"
     message: "检测到 MyBatis ${} 占位符，直接拼接 SQL，存在注入风险。建议使用 #{} 参数绑定。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-89"

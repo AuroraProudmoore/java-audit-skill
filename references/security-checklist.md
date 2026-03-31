@@ -370,12 +370,31 @@ gopher://127.0.0.1:6379/_*1%0d%0a...
 
 | # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
 |---|--------|---------------|------|----------|
-| 16.1 | Log4j2 版本 | `grep -rn "log4j2" --include="pom.xml"` + **版本对比** | 严重 | >= 2.17.1 安全 |
-| 16.2 | Fastjson 版本 | `grep -rn "fastjson" --include="pom.xml"` + **版本对比** | 严重 | >= 1.2.83 或 2.x |
-| 16.3 | Spring 版本 | `grep -rn "spring-boot\|spring-framework" --include="pom.xml"` + **版本对比** | 高 | 检查 CVE |
-| 16.4 | Shiro 版本 | `grep -rn "shiro" --include="pom.xml"` + **版本对比** | 严重 | 检查 CVE |
-| 16.5 | Tomcat 版本 | `grep -rn "tomcat" --include="pom.xml"` + **版本对比** | 高 | 检查 CVE |
+| 16.1 | Log4j2 版本 | `grep -rn "log4j2" --include="pom.xml"` + **tavily 搜索 CVE** | 严重 | >= 2.17.1 安全 |
+| 16.2 | Fastjson 版本 | `grep -rn "fastjson" --include="pom.xml"` + **tavily 搜索 CVE** | 严重 | >= 1.2.83 或 2.x |
+| 16.3 | Spring 版本 | `grep -rn "spring-boot\|spring-framework" --include="pom.xml"` + **tavily 搜索 CVE** | 高 | 检查 CVE |
+| 16.4 | Shiro 版本 | `grep -rn "shiro" --include="pom.xml"` + **tavily 搜索 CVE** | 严重 | 检查 CVE |
+| 16.5 | Tomcat 版本 | `grep -rn "tomcat" --include="pom.xml"` + **tavily 搜索 CVE** | 高 | 检查 CVE |
 | 16.6 | 依赖漏洞扫描 | `mvn org.owasp:dependency-check-maven:check` | 高 | 全量扫描 |
+
+**⚠️ CVE 查询必须使用 tavily（禁止凭记忆编造）**：
+
+```bash
+# 使用 tavily 搜索 CVE 信息
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE" -n 10
+
+# 示例
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "fastjson 1.2.79 vulnerability" -n 10
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "hessian 4.0.63 CVE" -n 10
+```
+
+**CVE 核实要点**：
+1. 从 NVD、Snyk、官方公告确认 CVE 真实存在
+2. 确认影响版本范围
+3. 确认 CVE 影响的具体组件（artifact）
+   - 示例：CVE-2020-1948 是 Apache Dubbo 漏洞，不是 Hessian 漏洞
+   - 示例：CVE-2024-46983 是 SOFA Hessian 漏洞，不是 Caucho Hessian 漏洞
 
 **版本对比方法**: 见 [vulnerability-conditions.md](vulnerability-conditions.md) 第 18 节
 

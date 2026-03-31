@@ -4,7 +4,7 @@
 
 **AI-Powered Java Security Audit Framework**
 
-[![Version](https://img.shields.io/badge/Version-1.5.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
+[![Version](https://img.shields.io/badge/Version-1.6.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
@@ -38,7 +38,7 @@
 | 📊 **多层审计架构** | 预扫描 + 双轨审计 + CoT推理 + 语义验证，兼顾效率与深度 |
 | 🚧 **覆盖率门禁** | 强制 100% 代码覆盖，解决 LLM "跳过不重要代码" 的天性 |
 | 🎯 **DKTSS 评分体系** | 比 CVSS 更贴合实战的漏洞优先级评分 |
-| 🛡️ **反幻觉机制** | 5 条铁律确保报告可信度 |
+| 🛡️ **反幻觉机制** | 7 条铁律确保报告可信度（含 CVE 核实、行号验证） |
 | 🔗 **调用链追踪** | 支持 LSP 语义级追踪，每一跳标注文件:行号 |
 
 ---
@@ -77,7 +77,7 @@ java-audit-skill/
 │   ├── tier-classify.ps1        # Tier 分级脚本 (Windows)
 │   ├── coverage-check.sh        # 覆盖率门禁检查 (Linux/macOS)
 │   └── coverage-check.ps1       # 覆盖率门禁检查 (Windows)
-├── rules/semgrep/              # Semgrep 规则（365条）
+├── rules/semgrep/              # Semgrep 规则（314条）
 ├── examples/
 │   └── vulnerable-springboot/  # 完整审计报告示例
 └── assets/                     # 图表/流程图资源
@@ -157,13 +157,15 @@ Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5
 
 #### Phase 3: 漏洞验证 & DKTSS 评分
 
-**反幻觉 5 条铁律**：
+**反幻觉 7 条铁律**：
 
 1. 报告漏洞前必须验证文件存在
 2. 代码片段必须来自实际文件，不得编造
 3. 调用链每一跳必须标注 **文件:行号**
 4. 不确定标记为 `HYPOTHESIS`，不得标记为 `CONFIRMED`
 5. **宁可漏报，不可误报**
+6. **CVE 编号必须联网核实，禁止凭记忆编造**
+7. **行号必须用 Read 验证，禁止模糊范围或猜测**
 
 #### Phase 4: Semgrep 规则沉淀
 
@@ -263,9 +265,7 @@ Score = Base - Friction + Weapon + Ver
 | **信息泄露** | 敏感信息日志、错误信息暴露、配置文件泄露 | Semgrep |
 | **配置安全** | Debug 模式、Swagger 暴露、Actuator 暴露 | Semgrep + 配置分析 |
 
-**Semgrep 规则统计**: 365 条规则，覆盖 70+ 组件配置安全
-
-**v1.5.0 新增覆盖**：LLM/AI 安全、GraphQL 安全、Kotlin 特有漏洞、Java 21 新特性、Spring Boot 3.x / Jakarta EE、微服务安全、NoSQL 注入、API 安全、输入验证、敏感数据处理、OWASP Top 10 2021 完整覆盖
+**Semgrep 规则统计**: 314 条规则，覆盖传统漏洞、新兴技术、微服务安全、组件配置等
 
 #### 依赖安全 - 版本分析
 
@@ -463,7 +463,7 @@ python scripts/java_audit.py --help
 | 📊 **Multi-Layer Audit Architecture** | Pre-scan + Dual-track audit + CoT reasoning + Semantic verification |
 | 🚧 **Coverage Gate** | Enforces 100% code coverage, solving LLM's tendency to skip "unimportant code" |
 | 🎯 **DKTSS Scoring System** | Vulnerability priority scoring more practical than CVSS |
-| 🛡️ **Anti-Hallucination Mechanism** | 5 iron rules ensure report credibility |
+| 🛡️ **Anti-Hallucination Mechanism** | 7 iron rules ensure report credibility (including CVE verification, line number validation) |
 | 🔗 **Call Chain Tracing** | Supports LSP semantic-level tracing with file:line annotations |
 
 ---
@@ -546,13 +546,15 @@ Track 2 (Control-driven): Endpoint entry → Check permissions → Business logi
 
 #### Phase 3: Verification & DKTSS Scoring
 
-**5 Anti-Hallucination Iron Rules**:
+**7 Anti-Hallucination Iron Rules**:
 
 1. Must verify file exists before reporting vulnerability
 2. Code snippets must come from actual files, no fabrication
 3. Every hop in call chain must have **file:line** annotation
 4. Uncertain findings marked as `HYPOTHESIS`, never `CONFIRMED`
 5. **Better to miss than to false positive**
+6. **CVE numbers must be verified online, no fabrication from memory**
+7. **Line numbers must be verified with Read, no fuzzy ranges or guessing**
 
 #### Phase 4: Semgrep Rule Generation
 

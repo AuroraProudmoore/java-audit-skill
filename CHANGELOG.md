@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-31
+
+### 审查发现的问题 / Issues Found in Review
+
+| # | 问题 | 严重性 | 状态 |
+|---|------|--------|------|
+| 1 | 联网搜索工具选择错误 - 使用 web_search 但未配置，应使用 tavily | 🔴 高 | ✅ 已修复 |
+| 2 | CVE 编号编造 - 报告 CVE-2020-1948 为 Hessian 漏洞（实际是 Dubbo），CVE-2019-1323 为 Hessian XXE（实际是 Windows Update） | 🔴 高 | ✅ 已修复 |
+| 3 | 行号定位不准 - 报告行号总是往前偏移几行 | 🟠 中 | ✅ 已修复 |
+| 4 | 报告分析草草 - 未达到 L4 级别要求，缺少调用链、对比分析、未使用安全机制 | 🔴 高 | ✅ 已修复 |
+| 5 | 报告格式问题 - 标题含严重程度标签、漏洞详情前有多余元信息块、分析写成标题式而非段落式 | 🟠 中 | ✅ 已修复 |
+| 6 | 代码位置不使用完整路径 - 只写文件名，用户无法直接定位 | 🟠 中 | ✅ 已修复 |
+| 7 | 分析不够详细 - 未达到 L4 级别，字数不足、要素缺失 | 🟠 中 | ✅ 已修复 |
+| 8 | 缺少覆盖率统计 - 报告完成后未汇报 Layer 1/2/3 审计覆盖率 | 🟠 中 | ✅ 已修复 |
+
+### Changed / 变更
+
+- **SKILL.md Phase 2-Deep 依赖安全检查**: 改为"必须使用 tavily"，添加详细命令示例
+  ```bash
+  node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE" -n 10
+  node ~/.openclaw/workspace/skills/tavily-search/scripts/extract.mjs "https://nvd.nist.gov/vuln/detail/CVE-XXX"
+  ```
+- **SKILL.md Phase 3 反幻觉铁律**: 从 5 条扩展为 7 条
+  - 新增第 6 条：CVE 编号必须联网核实，禁止凭记忆编造
+  - 新增第 7 条：行号必须用 Read 验证，禁止模糊范围或猜测
+- **SKILL.md Phase 5 报告格式铁律**: 新增报告格式要求
+  - 代码位置必须使用完整绝对路径
+  - 分析必须达到 L4 级别（1500字以上）
+  - 分析格式为连贯段落式（禁止标题式）
+- **SKILL.md 执行检查清单**: 新增 5 个检查项
+  - CVE 编号已联网核实（禁止凭记忆编造）
+  - 行号已用 Read 验证（禁止模糊范围）
+  - 依赖安全检查使用 tavily（禁止 web_search）
+  - 分析达到 L4 级别（调用链+对比分析+攻击路径+未使用安全机制）
+  - 代码位置使用完整绝对路径（禁止只写文件名）
+
+### Added / 新增
+
+- **references/report-template.md**: 新增"CVE 编号核实规范"章节
+  - 核实流程（搜索 → 确认来源 → 确认组件对应关系）
+  - 报告中的 CVE 描述格式（正确 vs 错误示例）
+- **references/report-template.md**: 新增"报告格式禁忌"章节
+  - 禁止在标题中添加严重程度标签
+  - 禁止在漏洞详情前添加元信息块
+  - 禁止代码位置不使用完整绝对路径
+  - 禁止分析写成标题式（应为段落式）
+- **references/report-template.md**: 新增"分析深度分级"章节
+  - L1-L4 级别定义
+  - java-audit-skill 要求 L4 级别（1500字以上）
+- **references/report-template.md**: 新增"合格分析示例"章节
+  - ❌ 不合格分析（三点式、标题式）
+  - ✅ 合格分析（段落式、包含 7 要素）
+- **references/security-checklist.md**: 依赖安全检查改为 tavily
+- **references/vulnerability-conditions.md**: 18.2 节改为 tavily
+- **REPORT-RULES.md**: 新增报告格式禁忌章节
+- **REPORT-RULES.md**: 新增第 8 条铁律"代码位置必须使用完整绝对路径"
+- **LEARNINGS.md**: 新增 LRN-20260331-001 至 LRN-20260331-005 学习记录
+
+### Fixed / 修复
+
+- **CVE 编号核实**: 禁止凭记忆编造 CVE，必须从 NVD/Snyk 官方数据确认
+- **联网搜索工具**: 依赖安全检查必须使用 tavily（已配置），不再使用 web_search（Brave API 未配置）
+- **行号验证**: 反幻觉铁律添加"行号必须用 Read 验证"要求
+- **分析深度**: 从 L3 提升到 L4 级别，要求 1500 字以上，包含完整 7 要素
+- **报告格式**: 
+  - 禁止在标题中添加严重程度标签
+  - 禁止在漏洞详情前添加元信息块
+  - 禁止分析写成标题式（应为连贯段落式）
+- **代码位置**: 必须使用完整绝对路径，禁止只写文件名
+- **覆盖率统计**: 每个报告末尾必须汇报 Layer 1/2/3 审计覆盖率
+
+### Improved / 改进
+
+- CVE 核实流程更加严格：必须确认组件对应关系
+- 报告分析示例更加清晰：合格示例包含完整的 7 个 L4 级别要素
+- 反幻觉机制更加完善：从 5 条铁律扩展为 7 条
+- 报告格式更加规范：明确禁忌事项和正确做法
+- 审计可追溯性：每个报告都包含覆盖率统计
+
+---
+
 ## [1.5.0] - 2026-03-30
 
 ### 审查发现的问题 / Issues Found in Review
@@ -29,32 +110,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added / 新增
 
-- **rules/semgrep/java-emerging.yaml**: 新增 45 条新兴技术安全规则
-  - LLM/AI 安全（4条）：API Key 硬编码、Prompt 注入、Agent 无限制、输出未验证
-  - GraphQL 安全（4条）：Introspection、深度限制、批量限制、字段建议
-  - Kotlin 特有漏洞（5条）：!! 空安全绕过、GlobalScope、runBlocking、非安全随机数、强制转换
-  - Java 21 新特性（3条）：Virtual Thread pinned、FFI 内存操作、switch 覆盖
-  - Jakarta EE / Spring Boot 3.x（4条）：Servlet Filter、JPA SQL注入、Validation、Native Image
-  - 并发安全（3条）：无界线程池、竞态条件、ThreadLocal 泄露
-  - 幂等性检查（2条）：支付接口、下单接口
-  - Fastjson 2.x（2条）：AutoType 配置、版本检查
-  - JWT 安全增强（3条）：弱密钥增强检测、无过期时间、alg=none
-  - CORS 安全增强（2条）：* + Credentials 组合、暴露敏感头
+- **rules/semgrep/java-emerging.yaml**: 新增 14 条新兴技术安全规则
+  - LLM/AI 安全（3条）：API Key 硬编码、Prompt 注入、Agent 无限制
+  - GraphQL 安全（2条）：Introspection、深度限制
+  - Kotlin 特有漏洞（2条）：!! 空安全绕过、GlobalScope
+  - Java 21 新特性（1条）：Virtual Thread pinned
+  - 并发安全（2条）：无界线程池、ThreadLocal 泄露
+  - Fastjson 2.x（1条）：AutoType 配置
+  - JWT 安全增强（2条）：弱密钥增强检测、alg=none
+  - CORS 安全增强（1条）：* + Credentials 组合
 
-- **rules/semgrep/java-microservice.yaml**: 新增 52 条微服务与数据库安全规则
-  - 微服务安全（9条）：Feign 认证、Gateway 路由、Dubbo 协议、gRPC 明文、Istio mTLS
-  - NoSQL 注入（4条）：MongoDB 注入、$where 注入、Elasticsearch 注入、Redis 命令注入
+- **rules/semgrep/java-microservice.yaml**: 新增 16 条微服务与数据库安全规则
+  - 微服务安全（5条）：Feign 认证、Gateway CORS、Dubbo 协议、gRPC 明文、Istio mTLS
+  - NoSQL 注入（3条）：MongoDB 注入、Elasticsearch 注入、Redis 命令注入
   - 数据库连接安全（3条）：凭证硬编码、MySQL/PostgreSQL SSL 禁用
-  - 反序列化利用链（4条）：Commons BeanUtils、ROME、C3P0、AspectJWeaver
-  - OWASP Top 10 2021（14条）：完整覆盖 A01-A10 十大风险类别
+  - 反序列化利用链（2条）：Commons BeanUtils、C3P0
+  - OWASP Top 10 2021（3条）：ECB 模式、敏感日志、SSRF
 
-- **rules/semgrep/java-api-security.yaml**: 新增 54 条 API 安全与输入验证规则
-  - REST API 安全（8条）：DELETE/PUT 认证、批量操作限制、幂等性、敏感数据返回、分页限制、API 文档
-  - 参数验证缺失（6条）：字符串、数值、邮箱、手机号、身份证、可选参数
-  - 敏感数据处理（7条）：密码明文、密码比较、敏感打印、toString、身份证/银行卡存储
-  - 会话与 Token 安全（7条）：Session 敏感信息、Session ID 日志、Cookie 安全、Token URL/硬编码/时序攻击
-  - 异常处理安全（5条）：堆栈泄露、异常消息返回、空 catch、通用 Exception、异常返回成功
-  - 重定向与文件下载（5条）：开放重定向、文件下载路径遍历、响应类型
+- **rules/semgrep/java-config.yaml**: 新增 12 条组件配置安全规则
+  - Log4j2（2条）：JNDI lookup、版本检查
+  - Spring Security（2条）：CSRF 禁用、permitAll 配置
+  - Actuator（1条）：端点暴露
+  - Shiro（1条）：默认密钥
+  - Swagger（1条）：开启检测
+  - Druid（1条）：无认证
+  - Fastjson（1条）：版本检查
+  - Nacos（1条）：无认证
+  - JWT（1条）：硬编码密钥
+  - H2 Console（1条）：开启检测
+
+- **rules/semgrep/java-api-security.yaml**: 新增 14 条 API 安全规则
+  - REST API（4条）：DELETE/PUT 认证、批量操作限制、敏感数据返回、参数验证
+  - 密码处理（2条）：明文存储、明文比较
+  - 敏感信息（1条）：打印敏感数据
+  - Token 安全（2条）：URL 参数、硬编码
+  - 异常处理（2条）：堆栈泄露、空 catch
+  - 重定向安全（1条）：开放重定向
+  - 文件下载（1条）：路径遍历
+
+- **scripts/layer1-scan.ps1**: Layer 1 危险模式预扫描 PowerShell 版本
+- **scripts/tier-classify.ps1**: Tier 分类 PowerShell 版本
+- **scripts/coverage-check.ps1**: 覆盖率门禁检查 PowerShell 版本
+- **examples/vulnerable-springboot/src/**: 示例 Java 代码（4个漏洞示例）
 
 ### Changed / 变更
 
@@ -75,6 +172,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 新增 Spring Security 6.x 规则（`authorizeHttpRequests`、Lambda DSL）
 - **rules/semgrep/README.md**: 更新规则列表，总计 259 条规则
 
+### Improved / 改进
+
+- **规则总数**: 198 → 314 条（+116 条新增）
+- **技术覆盖**: LLM/AI、GraphQL、Kotlin、Java 21、微服务安全、NoSQL 注入、OWASP Top 10
+- **覆盖率报告**: 更详细的分层统计，明确 T1 必须 100% 的硬性要求
+- **Windows 支持**: 
+  - 新增 3 个 PowerShell 脚本
+  - 所有 Semgrep 规则兼容 Windows 编码环境
+  - README 添加 Windows 使用说明
+
 ### Fixed / 修复
 
 - 覆盖率检查正则误匹配问题：改进为优先匹配 markdown 表格格式
@@ -82,12 +189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kotlin 项目漏检：所有扫描命令支持 `.kt` 文件
 - **PowerShell 脚本缺失**：新增 `layer1-scan.ps1`、`tier-classify.ps1`、`coverage-check.ps1`
 - **示例报告分析深度不足**：更新示例报告到 L3 级别，包含调用链追踪、对比分析、未使用安全机制
-
-### Improved / 改进
-
-- **规则总数**: 198 → 365 条（+167 条）
-- **技术覆盖**: 新增 LLM/AI、GraphQL、Kotlin、Java 21、Spring Boot 3.x、微服务安全、NoSQL 注入、API 安全、输入验证、敏感数据处理、OWASP Top 10 2021 完整覆盖
-- **覆盖率报告**: 更详细的分层统计，明确 T1 必须 100% 的硬性要求
+- **Semgrep 规则语法问题**：修复 10 个 YAML 文件中的 generic 语言、正则转义、编码问题
+- **敏感信息泄露**：删除 report-template.md 中的真实项目路径
 
 ---
 

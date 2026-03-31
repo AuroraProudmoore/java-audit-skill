@@ -13,9 +13,9 @@ rules:
         - "*.yml"
         - "*.yaml"
         - "*.properties"
-    message: "检测到 LLM API Key 硬编码。API Key 泄露可能导致未授权调用、费用损失。建议使用环境变量：OPENAI_API_KEY=${OPENAI_API_KEY}"
+    message: "检测到 LLM API Key 硬编码。API Key 泄露可能导致未授权调用、费用损失。建议使用环境变量：OPENAI_API_KEY=VAR_OPENAI_API_KEY"
     severity: ERROR
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -82,7 +82,7 @@ rules:
         - "*.kt"
     message: "检测到 GraphQL Introspection 开启。生产环境应禁用，可能泄露完整的 Schema 信息、字段名、类型定义。建议设置 introspection-enabled=false。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -125,7 +125,7 @@ rules:
         - "*.properties"
     message: "检测到 GraphQL 字段建议开启。错误提示可能泄露字段名信息。建议关闭。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-200"
@@ -136,7 +136,7 @@ rules:
   
   - id: kotlin-null-safety-bypass
     patterns:
-      - pattern-regex: '!!\s*$|!!\s*[),;\n]'
+      - pattern-regex: '!!\s*$|!!\s*[),; ]'
     paths:
       include:
         - "*.kt"
@@ -306,7 +306,7 @@ rules:
         - "*.json"
     message: "检测到 Native Image 反射配置。Native Image 有不同的安全特性，需检查反射配置是否暴露敏感类。"
     severity: INFO
-    languages: [java, generic]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -321,7 +321,7 @@ rules:
         - "*.properties"
     message: "检测到 AOT 编译配置。AOT 编译后某些动态特性可能失效，需检查安全配置是否正确应用。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -346,7 +346,7 @@ rules:
 
   - id: java-concurrent-race-condition
     patterns:
-      - pattern-regex: 'check.*\n.*update|get.*\n.*set|if.*\n.*=.*[+-]?=|double-checked.*locking'
+      - pattern-regex: 'check.* .*update|get.* .*set|if.* .*=.*[+-]?=|double-checked.*locking'
     paths:
       include:
         - "*.java"
@@ -431,7 +431,7 @@ rules:
         - "*.gradle"
     message: "检测到 Fastjson 2.x 版本。Fastjson 2.0.x 部分版本存在漏洞，建议升级到最新稳定版本。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -452,7 +452,7 @@ rules:
         - "*.kt"
     message: "检测到弱 JWT Secret（少于32字符或常见弱密钥）。JWT Secret 泄露可导致任意用户身份伪造。建议使用 256 位以上的强随机密钥。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-798"
@@ -500,7 +500,7 @@ rules:
         - "*.yaml"
     message: "检测到 CORS 配置允许任意域 + Credentials。这是严重的安全风险，可能导致 Cookie 被窃取。建议指定具体的域名。"
     severity: ERROR
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-942"
@@ -516,7 +516,7 @@ rules:
         - "*.yaml"
     message: "检测到 CORS 暴露敏感响应头。Authorization、Token 等敏感头不应暴露给前端。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-200"

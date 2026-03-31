@@ -107,7 +107,7 @@ rules:
         - "*.jsp"
     message: "检测到 JSP 表达式直接输出用户输入，可能存在 XSS 漏洞。建议使用 JSTL <c:out> 标签。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-79"
@@ -154,7 +154,7 @@ rules:
 
   - id: java-sensitive-exception-message
     patterns:
-      - pattern: return $E.getMessage()
+      - pattern-regex: "return\\s+\\w+\\.getMessage\\(\\)"
     message: "检测到异常消息直接返回给用户，可能泄露敏感信息。建议返回通用错误消息。"
     severity: WARNING
     languages: [java]
@@ -267,7 +267,7 @@ rules:
         - "*.yaml"
     message: "检测到 Log4j JNDI lookup，存在 Log4Shell 漏洞风险。建议升级 Log4j2 到 2.17.1+。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-502"
@@ -283,7 +283,7 @@ rules:
         - "*.properties"
     message: "检测到 Log4j context lookup，可能存在信息泄露或注入风险。"
     severity: WARNING
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-532"
@@ -303,7 +303,7 @@ rules:
         - "*.java"
     message: "检测到开启 debug 模式，生产环境应关闭。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -318,7 +318,7 @@ rules:
         - "*.properties"
     message: "检测到 Actuator 暴露所有端点，存在信息泄露风险。建议仅暴露 health,info。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -333,7 +333,7 @@ rules:
         - "*.properties"
     message: "检测到 H2 Console 开启，生产环境应禁用。"
     severity: ERROR
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-489"
@@ -352,7 +352,7 @@ rules:
         - "*.yaml"
     message: "检测到 CORS 允许所有来源，可能导致跨站请求伪造。建议限制允许的域名。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-942"
@@ -367,7 +367,7 @@ rules:
         - "*.yaml"
     message: "检测到 CORS allowCredentials=true，请确保 origins 未使用通配符。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-942"
@@ -382,7 +382,7 @@ rules:
         - "*.properties"
     message: "检测到文件上传配置，请确保设置了合理的文件大小限制。"
     severity: INFO
-    languages: [generic]
+    languages: [yaml]
     metadata:
       category: security
       cwe: "CWE-400"
@@ -404,7 +404,7 @@ rules:
 
   - id: java-open-redirect-model
     patterns:
-      - pattern: 'return "redirect:" + $URL'
+      - pattern-regex: "return\\s+\"redirect:\"\\s*\\+"
     message: "检测到动态重定向，可能存在开放重定向漏洞。建议使用白名单验证 URL。"
     severity: WARNING
     languages: [java]
@@ -459,7 +459,7 @@ rules:
         - "*.java"
     message: "检测到 MySQL JDBC 连接，可能存在 Fake Server 攻击风险。建议添加 detectCustomCollations=false。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-918"
@@ -475,7 +475,7 @@ rules:
         - "*.java"
     message: "检测到 PostgreSQL JDBC 连接，可能存在 logger RCE 漏洞。建议检查 logger 配置。"
     severity: WARNING
-    languages: [generic, java]
+    languages: [java]
     metadata:
       category: security
       cwe: "CWE-918"
