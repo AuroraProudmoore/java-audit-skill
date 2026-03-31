@@ -20,14 +20,13 @@ description: |
 ## 6 阶段审计流水线
 
 ```
-Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5
- 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  标准化报告
-                                      ↓
-                                Phase 4（可选）
-                                规则沉淀
+Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5 → Phase 4（可选）
+ 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  标准化报告   规则沉淀
 ```
 
 每个 Phase 有明确的输入、输出和质量标准，中间结果全量持久化到文件。
+
+**注意**：Phase 4 为可选步骤，在 Phase 5 生成报告后执行，用于将确认的漏洞模式沉淀为 Semgrep 规则。
 
 ---
 
@@ -48,8 +47,18 @@ find . -name "*.java" | wc -l
 find . -name "*.kt" | wc -l
 find . -name "*.xml" | wc -l
 
-# 统计 Controller 数量
-grep -r "@Controller\|@RestController\|@WebServlet" --include="*.java" | wc -l
+# 统计 Controller/入口点数量（多种框架）
+# Spring MVC
+grep -r "@Controller\|@RestController" --include="*.java" | wc -l
+
+# 原生 Servlet
+grep -r "@WebServlet\|extends HttpServlet\|implements Servlet" --include="*.java" | wc -l
+
+# Struts Action
+grep -r "extends ActionSupport\|implements Action\|@Action" --include="*.java" | wc -l
+
+# Filter（也是 T1 级文件）
+grep -r "@WebFilter\|implements Filter\|extends OncePerRequestFilter" --include="*.java" | wc -l
 
 # 统计模块数（Maven 多模块项目）
 find . -name "pom.xml" | wc -l
@@ -69,8 +78,18 @@ Get-ChildItem -Recurse -Include *.java,*.kt,*.xml | Measure-Object -Property Len
 (Get-ChildItem -Recurse -Filter *.kt).Count
 (Get-ChildItem -Recurse -Filter *.xml).Count
 
-# 统计 Controller 数量
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@Controller|@RestController|@WebServlet" | Measure-Object | Select-Object -ExpandProperty Count
+# 统计 Controller/入口点数量（多种框架）
+# Spring MVC
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@Controller|@RestController" | Measure-Object | Select-Object -ExpandProperty Count
+
+# 原生 Servlet
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@WebServlet|extends HttpServlet|implements Servlet" | Measure-Object | Select-Object -ExpandProperty Count
+
+# Struts Action
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "extends ActionSupport|implements Action|@Action" | Measure-Object | Select-Object -ExpandProperty Count
+
+# Filter（也是 T1 级文件）
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@WebFilter|implements Filter|extends OncePerRequestFilter" | Measure-Object | Select-Object -ExpandProperty Count
 
 # 统计模块数（Maven）
 (Get-ChildItem -Recurse -Filter pom.xml).Count
@@ -89,11 +108,37 @@ Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@
   "xml_files": 156,
   "controllers": 40,
   "modules": 5,
-  "ealoc": 98750,
-  "agents_needed": 7,
+  "t1_loc": 14000,
+  "t2_loc": 30000,
+  "t3_loc": 87000,
+  "ealoc": 37700,
+  "project_size": "中型",
+  "coverage_requirement": "95%",
   "build_system": "maven"
 }
 ```
+
+### EALOC 计算
+
+EALOC（Effective Audit Lines of Code）在 Phase 0 计算，用于判断项目规模和后续执行策略：
+
+```
+EALOC = T1_LOC × 1.0 + T2_LOC × 0.5 + T3_LOC × 0.1
+```
+
+| 项目规模 | EALOC | 覆盖率要求 | 执行策略 |
+|----------|-------|------------|----------|
+| 小型 | < 15,000 | 100% | 单会话完成，可简化流程 |
+| 中型 | 15,000 - 50,000 | 95% | 按模块拆分 |
+| 大型 | > 50,000 | 90% | 必须拆分多 Agent |
+
+**Tier 分类规则**（用于 EALOC 计算）：
+
+| Tier | 文件类型 | 权重 |
+|------|----------|------|
+| T1 | Controller、Filter、Servlet、Action | × 1.0 |
+| T2 | Service、DAO、Util、配置文件 | × 0.5 |
+| T3 | Entity、VO、DTO | × 0.1 |
 
 **使用 Python 脚本可生成更多输出**：
 
@@ -171,12 +216,47 @@ Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "permitAll|
 |------|------|------|----------|
 | Rule 0 | 第三方库源码 | SKIP | 不审计 |
 | Rule 1 | Layer 1 预扫描有 P0/P1 候选项 | T1 | 动态提升 |
-| Rule 2 | 含 @Controller/@RestController/@WebServlet/Filter | T1 | 完整深度分析 |
+| Rule 2 | **入口点类**（详见下方） | T1 | 完整深度分析 |
 | Rule 3 | 含 @Service/@Repository/@Mapper | T2 | 聚焦关键维度 |
 | Rule 4 | 类名含 Util/Helper/Handler | T2 | 聚焦关键维度 |
 | Rule 5 | .properties/.yml/security.xml | T2 | 聚焦关键维度 |
 | Rule 6 | 含 @Entity/@Table/@Data | T3 | 快速模式匹配 |
 | Rule 7 | 未匹配任何规则 | T2 | 保守兜底 |
+
+#### Rule 2: 入口点类定义（T1 级文件）
+
+入口点是接收外部 HTTP 请求的类，必须 100% 覆盖审计：
+
+| 框架类型 | 入口点特征 | 示例 |
+|----------|-----------|------|
+| **Spring MVC** | @Controller, @RestController | `@RestController public class UserController` |
+| **原生 Servlet** | @WebServlet, extends HttpServlet, implements Servlet | `@WebServlet("/api/user") public class UserServlet` |
+| **Struts 2** | extends ActionSupport, implements Action, @Action | `public class UserAction extends ActionSupport` |
+| **Filter** | @WebFilter, implements Filter, extends OncePerRequestFilter | `@WebFilter("/*") public class AuthFilter` |
+| **Jersey/JAX-RS** | @Path, @Provider | `@Path("/users") public class UserResource` |
+| **Play Framework** | extends Controller, extends Action | `public class UserController extends Controller` |
+
+**扫描命令**：
+
+```powershell
+# Spring MVC
+Select-String -Pattern "@Controller|@RestController"
+
+# 原生 Servlet
+Select-String -Pattern "@WebServlet|extends HttpServlet|implements Servlet"
+
+# Struts 2
+Select-String -Pattern "extends ActionSupport|implements Action|@Action"
+
+# Filter
+Select-String -Pattern "@WebFilter|implements Filter|extends OncePerRequestFilter"
+
+# Jersey/JAX-RS
+Select-String -Pattern "@Path|@Provider"
+
+# 全部入口点
+Select-String -Pattern "@Controller|@RestController|@WebServlet|extends HttpServlet|implements Servlet|extends ActionSupport|implements Action|@Action|@WebFilter|implements Filter|@Path"
+```
 
 ### 1.3 EALOC 公式（场景标签修正）
 
@@ -199,10 +279,60 @@ Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "permitAll|
 > - **中型项目**（EALOC 15000-50000）：按模块拆分，可用 `sessions_spawn` 启动子会话并行执行
 > - **大型项目**（EALOC > 50000）：必须拆分，每个子任务独立输出 `findings-raw.md`，最后合并
 
-### 1.4 输出文件
+### 1.4 依赖安全检查
+
+**执行时机**：在 Phase 1 读取 pom.xml/build.gradle 时，同步检查依赖安全。
+
+#### 检查流程
+
+```
+Step 1: 读取 pom.xml 提取依赖版本
+  ↓
+Step 2: 使用 tavily 搜索 CVE
+  ↓
+Step 3: 确认漏洞真实性（NVD/Snyk）
+  ↓
+Step 4: 标记需要升级的依赖
+```
+
+#### 检查命令（必须使用 tavily）
+
+```bash
+# 使用 tavily 搜索 CVE 漏洞信息
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE vulnerability" -n 10
+
+# 示例
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.107 CVE" -n 10
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "fastjson 1.2.79 vulnerability" -n 10
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
+```
+
+#### ⚠️ CVE 核实铁律
+
+1. **禁止凭记忆编造 CVE 编号** - 必须联网核实
+2. **必须确认 CVE 真实存在** - 从 NVD、Snyk 官方数据源确认
+3. **必须确认影响版本范围** - 不同版本可能有不同影响
+4. **必须确认组件对应关系** - 某个 CVE 可能只影响特定框架
+
+#### 关键依赖检查清单
+
+| 依赖 | 危险版本 | 安全版本 | 检查命令 |
+|------|----------|----------|----------|
+| Log4j2 | < 2.17.1 | ≥ 2.17.1 | tavily: "log4j2 CVE" |
+| Fastjson | < 1.2.83 | ≥ 1.2.83 | tavily: "fastjson CVE" |
+| Shiro | < 1.13.0 | ≥ 1.13.0 | tavily: "shiro CVE" |
+| Spring | 检查版本 | 检查版本 | tavily: "spring framework CVE" |
+| Netty | < 4.1.129 | ≥ 4.1.129 | tavily: "netty CVE" |
+
+#### 输出
+
+- `dependency-security.md`: 依赖安全检查结果
+
+### 1.5 输出文件
 
 - `tier-classification.md`: Tier 分类结果
 - `scenario-tags.json`: API 场景标签
+- `dependency-security.md`: 依赖安全检查结果
 
 #### tier-classification.md 示例
 
@@ -350,7 +480,37 @@ Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "MessageDig
 
 **为什么需要两条轨道？** 认证绕过这类漏洞，单独用 Sink-driven 找不到——该漏洞不是某行代码有问题，而是某个端点缺少了应有的权限检查。
 
-### Layer 2-Deep: 代码分析深度检查
+### Layer 2 执行流程
+
+```
+Step 1: 执行轨道 1 (Sink-driven)
+  ↓ 对 L1 发现的危险 Sink 追踪参数来源
+  ↓ 判断是否用户可控
+  ↓ 输出普通漏洞候选列表
+
+Step 2: 执行轨道 2 (Control-driven)
+  ↓ 列出所有 Controller 入口
+  ↓ 检查权限控制
+  ↓ 输出越权/认证绕过候选列表
+
+Step 3: 执行 Layer 2-Deep（仅对逻辑漏洞）
+  ↓ 对资金交易、状态变更等敏感接口
+  ↓ 执行 CoT 四步推理
+  ↓ 输出逻辑漏洞候选列表
+```
+
+### Layer 2-Deep: 逻辑漏洞 CoT 四步推理
+
+**执行时机**：当发现以下场景时，必须执行 Layer 2-Deep：
+
+| 场景 | 触发条件 | 示例 |
+|------|----------|------|
+| 资金交易 | 涉及支付、退款、转账 | `pay()`, `refund()`, `transfer()` |
+| 状态变更 | 涉及订单状态、审批流程 | `updateStatus()`, `approve()` |
+| 资源分配 | 涉及库存、名额 | `createOrder()`, `book()` |
+| 数据访问 | 涉及敏感数据查询 | `getUserInfo()`, `getOrderDetail()` |
+
+**注意**：Layer 2-Deep 专门用于逻辑漏洞分析，普通漏洞（SQL注入、命令注入等）用 Layer 2 双轨审计即可。
 
 对于 Semgrep 规则无法覆盖的漏洞类型，需要通过代码分析进行判断。
 
@@ -607,11 +767,86 @@ python scripts/java_audit.py /path/to/project --coverage --reviewed-file finding
 - 存在 未开始 或 部分完成 → 启动补充 Agent → 循环直到达标
 ```
 
+### 覆盖率不达标处理流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                覆盖率门禁回溯机制                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+  Phase 2.5: 检查覆盖率
+  ┌─────────────────────────────────────┐
+  │ 计算覆盖率 = 已审阅文件 / 总文件数  │
+  └─────────────────────────────────────┘
+              ↓
+        ┌─────┴─────┐
+        │ 覆盖率达标？│
+        └─────┬─────┘
+         是 ↓     ↓ 否
+  ┌──────────┐  ┌──────────────────────┐
+  │进入      │  │ 1. 列出遗漏文件列表  │
+  │Phase 3   │  │ 2. 返回 Phase 2      │
+  └──────────┘  │ 3. 补扫遗漏文件      │
+                │ 4. 更新审阅清单      │
+                │ 5. 再次检查覆盖率    │
+                └──────────┬───────────┘
+                           ↓
+                     ┌─────┴─────┐
+                     │ 达标？    │
+                     └─────┬─────┘
+                      是 ↓     ↓ 否
+                ┌──────────┐  ┌──────────┐
+                │Phase 3   │  │ 循环补扫 │
+                └──────────┘  └──────────┘
+```
+
+**补扫命令**：
+
+```powershell
+# 1. 获取遗漏文件列表
+# 对比实际文件列表和已审阅清单
+$allFiles = Get-ChildItem -Recurse -Filter *.java | Select-Object -ExpandProperty Name
+$reviewedFiles = Get-Content findings-raw.md | Select-String -Pattern "\.java" 
+$missingFiles = Compare-Object $allFiles $reviewedFiles
+
+# 2. 对遗漏文件执行审计
+foreach ($file in $missingFiles) {
+    Read $file
+    # 执行 Layer 2 分析
+}
+
+# 3. 更新 findings-raw.md
+# 4. 重新计算覆盖率
+```
+
 **阈值说明**：见上门禁阈值表，按项目规模分级执行。T1 文件必须 100% 覆盖。
 
 ---
 
 ## Phase 3: 漏洞验证 & DKTSS 评分
+
+### ⚠️ Phase 3 与 Layer 3 的区别
+
+| 名称 | 所属阶段 | 作用 |
+|------|----------|------|
+| **Layer 3** | Phase 2 内部 | 调用链语义验证，用 Read 验证每一跳 |
+| **Phase 3** | 独立阶段 | 最终漏洞确认、反幻觉检查、DKTSS 评分 |
+
+```
+Phase 2 内部:
+  Layer 1 → Layer 2 → Layer 3（调用链验证）
+                ↓
+         输出 findings-raw.md
+
+Phase 3:
+  读取 findings-raw.md
+    → 反幻觉铁律检查
+    → CVE 联网核实
+    → DKTSS 评分
+    → 状态标记
+                ↓
+         输出 findings-verified.md
+```
 
 ### 反幻觉 7 条铁律
 
@@ -1226,4 +1461,100 @@ Layer 2-Deep: CoT 四步推理（逻辑漏洞）
     ↓
 Layer 3: LSP/Joern 语义级验证
 ```
+
+---
+
+## 输出文件清单
+
+| 文件 | 生成阶段 | 说明 |
+|------|----------|------|
+| `audit-metrics.json` | Phase 0 | 项目度量数据（文件数、行数、EALOC） |
+| `tier-classification.md` | Phase 1 | Tier 分类结果 |
+| `scenario-tags.json` | Phase 1 | API 场景标签 |
+| `dependency-security.md` | Phase 1 | 依赖安全检查结果 |
+| `p0-critical.md` | Phase 2 Layer 1 | P0 级危险模式 |
+| `p1-high.md` | Phase 2 Layer 1 | P1 级危险模式 |
+| `p2-medium.md` | Phase 2 Layer 1 | P2 级危险模式 |
+| `findings-raw.md` | Phase 2 | 候选漏洞列表（未验证） |
+| `findings-verified.md` | Phase 3 | 验证后漏洞列表（已确认） |
+| `audit-report.md` | Phase 5 | 最终审计报告 |
+| `custom-rules.yaml` | Phase 4 | 自定义 Semgrep 规则 |
+
+---
+
+## 小型项目简化流程
+
+**适用条件**：EALOC < 15,000（小型项目）
+
+### 简化执行策略
+
+| 标准流程 | 简化流程 | 说明 |
+|----------|----------|------|
+| Phase 0 + Phase 1 分开执行 | 合并执行 | 一次性统计 + 读取 pom.xml |
+| Phase 2 Layer 1/2/3 分开 | 合并执行 | 直接 Read 所有文件 |
+| Phase 2.5 覆盖率检查 | 可跳过 | 小型项目必须 100% 覆盖 |
+| Phase 3 + Phase 5 分开 | 合并执行 | 验证 + 报告一起生成 |
+
+### 简化流程图
+
+```
+Step 1: 度量 + 侦察
+  ↓
+  - 统计文件数、行数
+  - 计算 EALOC，判断项目规模
+  - 读取 pom.xml，检查依赖安全
+  - 列出所有 Controller 入口
+
+Step 2: 全量代码审计
+  ↓
+  - Read 所有 Java 文件
+  - 检查权限控制（Control-driven）
+  - 追踪危险模式（Sink-driven）
+  - 记录所有发现
+
+Step 3: 验证 + 报告
+  ↓
+  - 应用反幻觉铁律
+  - CVE 联网核实
+  - 生成 audit-report.md
+  - 报告末尾添加覆盖率统计
+```
+
+### 小型项目执行命令
+
+```powershell
+# Step 1: 度量
+$files = Get-ChildItem -Recurse -Filter *.java
+$files.Count  # 文件数
+($files | Get-Content | Measure-Object -Line).Lines  # 行数
+
+# Step 2: 列出所有文件
+$files | Select-Object -ExpandProperty FullName
+
+# Step 3: 逐个读取审计
+foreach ($file in $files) {
+    Read $file.FullName
+    # 检查权限控制、危险模式
+}
+
+# Step 4: 生成报告
+# 按 report-template.md 格式书写
+```
+
+### 覆盖率统计模板
+
+```markdown
+## 审计覆盖率统计
+
+| 层级 | 扫描内容 | 覆盖数量 | 总数量 | 覆盖率 |
+|------|----------|----------|--------|--------|
+| Layer 1 | 危险模式预扫描 | 18 个文件 | 18 个 Java 文件 | 100% |
+| Layer 2 | 双轨审计 | 11 个 Controller | 11 个 Controller | 100% |
+| Layer 3 | 调用链验证 | 6 个漏洞 | 6 个候选漏洞 | 100% |
+```
+
+---
+
+**文档版本**: v1.7.0  
+**最后更新**: 2026-03-31
 

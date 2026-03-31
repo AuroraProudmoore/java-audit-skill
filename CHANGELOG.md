@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.6.0] - 2026-03-31
+## [1.7.0] - 2026-03-31
 
 ### 审查发现的问题 / Issues Found in Review
 
@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 6 | 代码位置不使用完整路径 - 只写文件名，用户无法直接定位 | 🟠 中 | ✅ 已修复 |
 | 7 | 分析不够详细 - 未达到 L4 级别，字数不足、要素缺失 | 🟠 中 | ✅ 已修复 |
 | 8 | 缺少覆盖率统计 - 报告完成后未汇报 Layer 1/2/3 审计覆盖率 | 🟠 中 | ✅ 已修复 |
+| 9 | 入口点统计不完整 - 未覆盖原生 Servlet、Struts、Jersey 等框架 | 🟠 中 | ✅ 已修复 |
+| 10 | 审计流程问题 - Phase 4 位置、EALOC 时机、覆盖率回溯等 8 个问题 | 🔴 高 | ✅ 已修复 |
+| 11 | README.md 功能介绍和流程介绍不够详细 | 🟠 中 | ✅ 已修复 |
 
 ### Changed / 变更
 
@@ -61,7 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **references/vulnerability-conditions.md**: 18.2 节改为 tavily
 - **REPORT-RULES.md**: 新增报告格式禁忌章节
 - **REPORT-RULES.md**: 新增第 8 条铁律"代码位置必须使用完整绝对路径"
-- **LEARNINGS.md**: 新增 LRN-20260331-001 至 LRN-20260331-005 学习记录
+- **LEARNINGS.md**: 新增 LRN-20260331-001 至 LRN-20260331-007 学习记录
+- **SKILL.md Phase 0**: 扩展入口点统计，支持多框架
+- **SKILL.md Phase 1 Rule 2**: 新增入口点类定义，覆盖 6 种主流框架
 
 ### Fixed / 修复
 
@@ -75,6 +80,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 禁止分析写成标题式（应为连贯段落式）
 - **代码位置**: 必须使用完整绝对路径，禁止只写文件名
 - **覆盖率统计**: 每个报告末尾必须汇报 Layer 1/2/3 审计覆盖率
+- **入口点统计**: 扩展支持多框架（Spring MVC、Servlet、Struts、Filter、Jersey、Play）
+- **审计流程**: 修复 8 个流程问题
+  - Phase 4 移到 Phase 5 之后
+  - Phase 0 添加 EALOC 计算
+  - Layer 2-Deep 明确执行时机
+  - Phase 1 添加依赖安全检查
+  - Phase 2.5 添加覆盖率回溯机制
+  - Phase 3 添加与 Layer 3 区分说明
+  - 添加完整输出文件清单
+  - 添加小型项目简化流程
+- **README.md**: 完全重写
+  - 核心功能详细说明（6 阶段流水线、多层审计架构、覆盖率门禁、DKTSS 评分、反幻觉机制、调用链追踪）
+  - 详细流程说明（每个 Phase 的 Step-by-step 执行步骤）
+  - 使用介绍（环境要求、安装步骤、两种使用方式、具体命令示例）
+  - 漏洞类型覆盖（P0/P1/P2 详细列表）
+  - 中英文双语
 
 ### Improved / 改进
 

@@ -1,26 +1,27 @@
-﻿# Java Audit Skill
+# Java Audit Skill
 
 <div align="center">
 
-**AI-Powered Java Security Audit Framework**
+**AI 驱动的 Java/Kotlin 代码安全审计框架**
 
-[![Version](https://img.shields.io/badge/Version-1.6.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
+[![Version](https://img.shields.io/badge/Version-1.7.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
 [![Security](https://img.shields.io/badge/Security-Policy-green.svg)](SECURITY.md)
 
-[English](#english) | [中文](#中文)
-<a name="">email：aurora1219@139.com</a>
+[中文文档](#中文文档) | [English Documentation](#english-documentation)
+
+📧 Email: aurora1219@139.com
 </div>
 
 ---
 
-<a name="中文"></a>
+<a name="中文文档"></a>
 
-## 📖 中文文档
+## 中文文档
 
-### 概述
+### 📖 概述
 
 **Java Audit Skill** 是一个 AI 驱动的 Java/Kotlin 代码安全审计框架，将资深安全审计员的方法论编码成 LLM 可执行的工作流协议。
 
@@ -30,20 +31,448 @@
 
 ---
 
-### ✨ 核心特性
+## ✨ 核心功能
 
-| 特性 | 说明 |
-|------|------|
-| 🔄 **6 阶段审计流水线** | 从代码度量到标准化报告，每个阶段有明确的输入输出和质量标准 |
-| 📊 **多层审计架构** | 预扫描 + 双轨审计 + CoT推理 + 语义验证，兼顾效率与深度 |
-| 🚧 **覆盖率门禁** | 强制 100% 代码覆盖，解决 LLM "跳过不重要代码" 的天性 |
-| 🎯 **DKTSS 评分体系** | 比 CVSS 更贴合实战的漏洞优先级评分 |
-| 🛡️ **反幻觉机制** | 7 条铁律确保报告可信度（含 CVE 核实、行号验证） |
-| 🔗 **调用链追踪** | 支持 LSP 语义级追踪，每一跳标注文件:行号 |
+### 1. 🔄 6 阶段审计流水线
+
+从代码度量到标准化报告，每个阶段有明确的输入输出和质量标准。
+
+```
+Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5 → Phase 4（可选）
+ 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  标准化报告   规则沉淀
+```
+
+| 阶段 | 功能 | 输入 | 输出 |
+|------|------|------|------|
+| **Phase 0** | 代码度量 | 项目源码 | audit-metrics.json（文件数、行数、EALOC） |
+| **Phase 1** | 项目侦察 | pom.xml、源码 | Tier 分类、依赖安全检查、场景标签 |
+| **Phase 2** | 多层审计 | L1 扫描结果 | findings-raw.md（候选漏洞列表） |
+| **Phase 2.5** | 覆盖率门禁 | 审阅文件清单 | 覆盖率报告（必须达标才能继续） |
+| **Phase 3** | 漏洞验证 | findings-raw.md | findings-verified.md（确认漏洞 + DKTSS 评分） |
+| **Phase 5** | 标准化报告 | findings-verified.md | audit-report.md（最终报告） |
+| **Phase 4** | 规则沉淀 | 确认漏洞模式 | custom-rules.yaml（Semgrep 规则） |
+
+### 2. 📊 多层审计架构（Phase 2 内部）
+
+Phase 2 包含 4 个层级，兼顾效率与深度：
+
+| 层级 | 名称 | 作用 | 工具 |
+|------|------|------|------|
+| **Layer 1** | 全量预扫描 | 用 grep 快速扫描危险模式 | grep / Select-String |
+| **Layer 2** | 双轨审计 | 追踪漏洞来源 + 检查权限控制 | LLM + Read |
+| **Layer 2-Deep** | CoT 四步推理 | 逻辑漏洞深度分析 | LLM |
+| **Layer 3** | 调用链验证 | 用 Read 验证每一跳 | Read |
+
+### 3. 🚧 覆盖率门禁（核心创新）
+
+**这是反 LLM 天性的核心设计**——LLM 倾向于跳过"看起来不重要"的代码，而漏洞偏偏喜欢藏在那些地方。
+
+| 项目规模 | EALOC | 覆盖率要求 | T1 覆盖率 |
+|----------|-------|------------|-----------|
+| 小型 | < 15,000 | **100%** | **100%** |
+| 中型 | 15,000 - 50,000 | **95%** | **100%** |
+| 大型 | > 50,000 | **90%** | **100%** |
+
+**T1 文件（Controller/Filter）必须 100% 覆盖，无例外。**
+
+### 4. 🎯 DKTSS 评分体系
+
+比 CVSS 更贴合实战的漏洞优先级评分标准。
+
+```
+Score = Base - Friction + Weapon + Ver
+```
+
+| 维度 | 说明 | 示例 |
+|------|------|------|
+| **Base** | 漏洞类型 + 实际影响 | SQL注入 = 8，RCE = 10 |
+| **Friction** | 实战阻力 | 需要管理员权限 = -3，需要内网访问 = -2 |
+| **Weapon** | 武器化程度 | 现成 EXP = +2，需要定制 = 0 |
+| **Ver** | 版本因子 | 最新版本 = 0，旧版本 = +1 |
+
+**评分示例**：
+
+| 漏洞 | CVSS | DKTSS | 分析 |
+|------|------|-------|------|
+| 后台 SQL 注入 | 8.8 | 6 | 需要管理员权限，实战优先级降低 |
+| 前台 Velocity SSTI | 9.8 | 10 | 无需认证 + 现成 EXP |
+| 内网 SSRF | 7.5 | 5 | 需要内网访问 |
+
+### 5. 🛡️ 反幻觉机制（7 条铁律）
+
+确保报告可信度，避免 LLM 编造漏洞。
+
+| # | 铁律 | 说明 |
+|---|------|------|
+| 1 | 文件存在验证 | 报告漏洞前必须用 Read 验证文件存在 |
+| 2 | 代码真实性 | 代码片段必须来自实际 Read 输出，不得编造 |
+| 3 | 行号标注 | 调用链每一跳必须标注 **文件:行号** |
+| 4 | 状态标记 | 不确定标记为 HYPOTHESIS，不得标记为 CONFIRMED |
+| 5 | 宁漏勿误 | 宁可漏报，不可误报 |
+| 6 | **CVE 核实** | CVE 编号必须联网核实（用 tavily），禁止凭记忆编造 |
+| 7 | **行号验证** | 行号必须用 Read 验证，禁止模糊范围 |
+
+### 6. 🔗 调用链追踪
+
+完整追踪从用户输入到危险 Sink 的调用路径：
+
+```
+AdminController.runCommand() (AdminController.java:67)
+  → CmdController.executeCmd() (CmdController.java:45)
+    → Runtime.exec() (危险 Sink)
+```
 
 ---
 
-### 🎯 适用场景
+## 📂 项目结构
+
+```
+java-audit-skill/
+├── SKILL.md                    # 主协议文档（6阶段审计流水线）
+├── README.md                   # 项目说明文档
+├── REPORT-RULES.md             # 报告输出规范
+├── CHANGELOG.md                # 版本更新记录
+├── references/                 # 参考文档
+│   ├── dktss-scoring.md        # DKTSS 评分体系
+│   ├── vulnerability-conditions.md  # 漏洞成立判断条件
+│   ├── logic-vulnerability-cot.md   # 逻辑漏洞 CoT 四步推理
+│   ├── business-scenario-tags.md    # 业务场景标签系统
+│   ├── security-checklist.md   # 安全检查清单（55+ 漏洞类型）
+│   └── report-template.md      # 标准化报告模板
+├── scripts/                    # 审计脚本
+│   ├── java_audit.py           # 审计辅助脚本（跨平台）
+│   ├── layer1-scan.ps1         # Layer 1 预扫描 (Windows)
+│   ├── tier-classify.ps1       # Tier 分级脚本 (Windows)
+│   └── coverage-check.ps1      # 覆盖率检查 (Windows)
+├── rules/semgrep/              # Semgrep 规则（314条）
+└── examples/                   # 审计报告示例
+```
+
+---
+
+## 🚀 快速开始
+
+### 环境要求
+
+| 依赖 | 版本 | 用途 |
+|------|------|------|
+| Python | 3.8+ | 运行审计脚本 |
+| PowerShell | 5.0+ | Windows 扫描命令 |
+| Semgrep | 最新版 | Layer 1 扫描（可选） |
+
+### 安装步骤
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/AuroraProudmoore/java-audit-skill.git
+
+# 2. 放置到 OpenClaw skills 目录
+# Windows: C:\Users\<用户名>\.openclaw\workspace\skills\java-audit-skill\
+# Linux/macOS: ~/.openclaw/workspace/skills/java-audit-skill/
+
+# 3. 安装 Semgrep（可选，用于 Layer 1 扫描）
+pip install semgrep
+```
+
+### 使用方式
+
+#### 方式一：作为 OpenClaw Skill 使用（推荐）
+
+在 OpenClaw 对话中触发：
+
+```
+帮我审计这个 Java 项目：E:\项目\demo-project
+```
+
+LLM 会自动执行完整的 6 阶段审计流程。
+
+#### 方式二：独立使用脚本
+
+**Phase 0: 代码度量**
+
+```powershell
+# 统计 Java 文件数
+(Get-ChildItem -Recurse -Filter *.java).Count
+
+# 统计代码行数
+(Get-ChildItem -Recurse -Filter *.java | Get-Content | Measure-Object -Line).Lines
+
+# 列出所有 Java 文件
+Get-ChildItem -Recurse -Filter *.java | Select-Object -ExpandProperty FullName
+```
+
+**Phase 1: 项目侦察**
+
+```powershell
+# 读取 pom.xml
+Get-Content pom.xml
+
+# 统计 Controller 数量
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@Controller|@RestController"
+
+# 检查权限注解
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@PreAuthorize|hasRole"
+```
+
+**Phase 2 Layer 1: 危险模式预扫描**
+
+```powershell
+# P0 级（严重）- 反序列化
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "ObjectInputStream|JSON\.parseObject|Runtime\.getRuntime|ProcessBuilder"
+
+# P1 级（高危）- SQL 注入
+Select-String -Path (Get-ChildItem -Recurse -Filter *.xml).FullName -Pattern '\$\{'
+
+# P1 级（高危）- SSRF
+Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "URL\(|HttpClient|RestTemplate"
+```
+
+**Phase 2 Layer 2: 双轨审计**
+
+LLM 自动执行，对 Layer 1 发现的问题点追踪验证。
+
+**Phase 3: 漏洞验证**
+
+```bash
+# 使用 tavily 搜索 CVE
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.107 CVE" -n 10
+```
+
+---
+
+## 📋 详细流程说明
+
+### Phase 0: 代码库度量
+
+**目标**：统计项目规模，判断是小型/中型/大型项目。
+
+**执行步骤**：
+
+```powershell
+# Step 1: 统计文件数
+$javaFiles = (Get-ChildItem -Recurse -Filter *.java).Count
+
+# Step 2: 统计代码行数
+$loc = (Get-ChildItem -Recurse -Filter *.java | Get-Content | Measure-Object -Line).Lines
+
+# Step 3: 统计入口点数量
+$controllers = Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@Controller|@RestController"
+
+# Step 4: 计算 EALOC
+# EALOC = T1_LOC × 1.0 + T2_LOC × 0.5 + T3_LOC × 0.1
+```
+
+**输出文件**：`audit-metrics.json`
+
+```json
+{
+  "java_files": 18,
+  "total_loc": 779,
+  "controllers": 11,
+  "ealoc": 6500,
+  "project_size": "小型",
+  "coverage_requirement": "100%"
+}
+```
+
+### Phase 1: 项目侦察
+
+**目标**：识别技术栈、关键依赖、Tier 分类。
+
+**执行步骤**：
+
+```powershell
+# Step 1: 读取 pom.xml 获取依赖
+Read pom.xml
+
+# Step 2: 识别入口点（T1 级文件）
+Select-String -Pattern "@Controller|@RestController|@WebServlet|extends HttpServlet"
+
+# Step 3: 检查权限控制
+Select-String -Pattern "@PreAuthorize|@Secured|hasRole|permitAll"
+
+# Step 4: 依赖安全检查（使用 tavily）
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.107 CVE" -n 10
+```
+
+**Tier 分类规则**：
+
+| Tier | 文件类型 | 分析深度 | 权重 |
+|------|----------|----------|------|
+| T1 | Controller、Filter、Servlet、Action | 完整深度分析 | × 1.0 |
+| T2 | Service、DAO、Util、配置文件 | 聚焦关键维度 | × 0.5 |
+| T3 | Entity、VO、DTO | 快速模式匹配 | × 0.1 |
+
+### Phase 2: 多层审计
+
+#### Layer 1: 全量预扫描
+
+**目标**：用 grep 快速扫描，找出危险模式候选点。
+
+```powershell
+# P0 级扫描
+Get-ChildItem -Recurse -Include *.java | Select-String -Pattern "ObjectInputStream|JSON\.parseObject|Runtime\.getRuntime|Velocity\.evaluate|InitialContext\.lookup"
+
+# P1 级扫描
+Get-ChildItem -Recurse -Include *.java | Select-String -Pattern "Statement|createStatement|\$\{|URL\(|FileInputStream|MultipartFile"
+
+# P2 级扫描
+Get-ChildItem -Recurse -Include *.java | Select-String -Pattern "@PreAuthorize|permitAll|MessageDigest|MD5"
+```
+
+**输出文件**：`p0-critical.md`、`p1-high.md`、`p2-medium.md`
+
+#### Layer 2: 双轨审计
+
+**轨道 1: Sink-driven**（从危险代码往上追）
+
+```
+发现 Runtime.exec(cmd)
+  ↓ Read 读取代码
+  ↓ 追踪 cmd 参数来源
+  ↓ 搜索调用者
+  ↓ 判断是否用户可控
+  ↓ 结论：漏洞 / 安全
+```
+
+**轨道 2: Control-driven**（从入口往下查权限）
+
+```
+列出所有 Controller 入口
+  ↓ Read 读取每个 Controller
+  ↓ 检查是否有 @PreAuthorize
+  ↓ 无权限注解 + 敏感操作 = 漏洞
+```
+
+#### Layer 2-Deep: 逻辑漏洞 CoT 四步推理
+
+**执行时机**：当发现资金交易、状态变更等敏感接口时。
+
+```
+Step 1: 场景与入口识别 → 识别 API 功能场景
+Step 2: 防御机制审计 → 寻找代码中的"锁"和"盾"
+Step 3: 对抗性沙箱模拟 → 设计 PoC
+Step 4: 漏洞结果判定 → 给出负责任结论
+```
+
+#### Layer 3: 调用链语义级验证
+
+**目标**：用 Read 验证 Layer 2 追踪的调用链是否正确。
+
+```
+Layer 2 输出的调用链:
+  Controller → Service → Runtime.exec
+
+Layer 3 验证:
+  ↓ Read Controller.java 确认入口
+  ↓ Read Service.java 确认调用
+  ↓ Read 实际执行点确认危险代码
+  ↓ 检查是否有条件分支阻断
+  ↓ 结论：调用链正确 / 有阻断
+```
+
+### Phase 2.5: 覆盖率门禁
+
+**检查逻辑**：
+
+```
+已审计文件列表 vs 实际文件列表
+  ↓
+diff 对比
+  ↓
+覆盖率达标 → 进入 Phase 3
+覆盖率不达标 → 返回 Phase 2 补扫遗漏文件
+```
+
+### Phase 3: 漏洞验证
+
+**核心任务**：
+
+1. 应用反幻觉 7 条铁律
+2. CVE 联网核实（用 tavily）
+3. DKTSS 评分
+4. 状态标记（CONFIRMED / HYPOTHESIS）
+
+**输出文件**：`findings-verified.md`
+
+### Phase 5: 标准化报告
+
+**报告结构**：
+
+```markdown
+### [漏洞标题]
+
+#### 描述
+[200字以内，说明漏洞类型、成因、核心风险点]
+
+#### 漏洞详情
+
+**代码位置**：
+[完整绝对路径]:[行号]
+
+**代码片段**：
+[实际代码]
+
+**分析**：
+[连贯段落式，1500字以上，包含 7 要素]
+
+#### 修复建议
+[具体修复方案]
+```
+
+**分析 7 要素**：
+
+1. 漏洞点定位
+2. 调用链追踪
+3. 缺少的安全控制
+4. 攻击路径
+5. 对比分析
+6. 未使用的安全机制
+7. 漏洞类型归纳（CWE）
+
+---
+
+## 🔍 覆盖的漏洞类型
+
+### P0 级（严重）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **反序列化** | Fastjson、Jackson、XStream、Hessian、Java 原生序列化 |
+| **SSTI** | Velocity、FreeMarker、Thymeleaf |
+| **表达式注入** | SpEL、OGNL |
+| **JNDI 注入** | InitialContext.lookup |
+| **命令执行** | Runtime.exec、ProcessBuilder |
+
+### P1 级（高危）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **SQL 注入** | MyBatis `${}`、JDBC 原生拼接 |
+| **SSRF** | URL、HttpClient、RestTemplate |
+| **文件操作** | 路径穿越、任意文件上传/读取 |
+| **XXE** | DocumentBuilder、SAXParser |
+
+### P2 级（中危）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **认证授权** | 越权访问、认证绕过 |
+| **加密安全** | 弱哈希算法、硬编码密钥 |
+| **信息泄露** | 敏感信息日志、错误信息暴露 |
+
+### 依赖安全检查
+
+| 依赖 | 危险版本 | 安全版本 |
+|------|----------|----------|
+| Log4j2 | < 2.17.1 | ≥ 2.17.1 |
+| Fastjson | < 1.2.83 | ≥ 1.2.83 |
+| Shiro | < 1.13.0 | ≥ 1.13.0 |
+| Netty | < 4.1.129 | ≥ 4.1.129 |
+
+---
+
+## 🎯 适用场景
 
 - ✅ Java/Kotlin 项目的 **0day 漏洞挖掘**
 - ✅ 企业级代码库的**安全审计**
@@ -53,380 +482,24 @@
 
 ---
 
-### 📊 项目结构
-
-```
-java-audit-skill/
-├── SKILL.md                    # 主协议文档（6阶段审计流水线）
-├── README.md                   # 项目说明文档
-├── REPORT-RULES.md             # 报告输出规范（11条铁律）
-├── CHANGELOG.md                # 版本更新记录
-├── references/
-│   ├── dktss-scoring.md        # DKTSS 漏洞评分体系
-│   ├── vulnerability-conditions.md  # 漏洞成立判断条件
-│   ├── logic-vulnerability-cot.md   # 逻辑漏洞 CoT 四步推理
-│   ├── business-scenario-tags.md    # 业务场景标签系统
-│   ├── security-checklist.md   # 55+ 漏洞类型检查清单
-│   ├── report-template.md      # 标准化报告模板
-│   └── cve-offline-lookup.md   # 离线 CVE 速查表
-├── scripts/
-│   ├── java_audit.py           # 审计辅助脚本（跨平台）
-│   ├── layer1-scan.sh           # Layer 1 危险模式预扫描 (Linux/macOS)
-│   ├── layer1-scan.ps1          # Layer 1 危险模式预扫描 (Windows)
-│   ├── tier-classify.sh         # Tier 分级脚本 (Linux/macOS)
-│   ├── tier-classify.ps1        # Tier 分级脚本 (Windows)
-│   ├── coverage-check.sh        # 覆盖率门禁检查 (Linux/macOS)
-│   └── coverage-check.ps1       # 覆盖率门禁检查 (Windows)
-├── rules/semgrep/              # Semgrep 规则（314条）
-├── examples/
-│   └── vulnerable-springboot/  # 完整审计报告示例
-└── assets/                     # 图表/流程图资源
-```
-
----
-
-### ⚙️ 6 阶段审计流水线
-
-```
-Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5
- 代码度量   项目侦察   多层审计   覆盖率门禁  漏洞验证  标准化报告
-                                      ↓
-                                Phase 4（可选）
-                                规则沉淀
-```
-
-#### Phase 0: 代码库度量
-
-统计项目规模，计算审计工作量。
-
-**输出**: `audit-metrics.json`
-
-```json
-{
-  "total_loc": 131000,
-  "java_files": 847,
-  "controllers": 40,
-  "modules": 5,
-  "ealoc": 98750,
-  "agents_needed": 7
-}
-```
-
-#### Phase 1: 项目侦察 & EALOC 资源分配
-
-**Tier 分类规则**：
-
-| 规则 | 条件 | 分析深度 |
-|------|------|----------|
-| T1 | Controller / Filter / Servlet | 完整深度分析 |
-| T2 | Service / DAO / Util | 聚焦关键维度 |
-| T3 | Entity / VO / DTO | 快速模式匹配 |
-| SKIP | 第三方库源码 | 不审计 |
-
-**EALOC 公式**: `EALOC = T1_LOC × 1.0 + T2_LOC × 0.5 + T3_LOC × 0.1`
-
-**Agent 分配**: `Agent数量 = ceil(EALOC / 15000)`
-
-#### Phase 2: 多层审计架构
-
-| 层级 | 内容 | 工具 |
-|------|------|------|
-| **Layer 1** | 全量预扫描 | ripgrep + Semgrep |
-| **Layer 2** | 双轨审计 | LLM |
-| **Layer 2-Deep** | CoT 四步推理（逻辑漏洞） | LLM |
-| **Layer 3** | 调用链语义验证 | LSP / Grep |
-
-**双轨审计模型**：
-
-```
-轨道 1 (Sink-driven):    危险代码 ← 追踪来源 ← 用户输入
-轨道 2 (Control-driven): 端点入口 → 检查权限 → 业务逻辑
-```
-
-> **为什么需要两条轨道？** 认证绕过这类漏洞，单独用 Sink-driven 找不到——它不是某行代码有问题，而是某个端点缺少了应有的权限检查。
-
-#### Phase 2.5: 覆盖率门禁（核心创新）
-
-**这是反 LLM 天性的核心设计**——LLM 倾向于跳过"看起来不重要"的代码，而漏洞偏偏喜欢藏在那些地方。
-
-**门禁规则**：
-
-- 每个 Agent 必须输出「审阅文件清单」
-- 清单与实际文件列表做 diff
-- **覆盖率 < 100% → 禁止进入 Phase 3**
-
-#### Phase 3: 漏洞验证 & DKTSS 评分
-
-**反幻觉 7 条铁律**：
-
-1. 报告漏洞前必须验证文件存在
-2. 代码片段必须来自实际文件，不得编造
-3. 调用链每一跳必须标注 **文件:行号**
-4. 不确定标记为 `HYPOTHESIS`，不得标记为 `CONFIRMED`
-5. **宁可漏报，不可误报**
-6. **CVE 编号必须联网核实，禁止凭记忆编造**
-7. **行号必须用 Read 验证，禁止模糊范围或猜测**
-
-#### Phase 4: Semgrep 规则沉淀
-
-将确认的漏洞模式转换为 Semgrep 规则，可集成到 CI/CD。
-
-```yaml
-rules:
-  - id: velocity-ssti
-    patterns:
-      - pattern: Velocity.evaluate($CONTEXT, $WRITER, $NAME, $USER_INPUT)
-    message: 检测到用户可控的 Velocity 模板输入，存在 SSTI 风险
-    severity: ERROR
-    languages: [java]
-```
-
-#### Phase 5: 标准化报告
-
-**9 个必填字段组**：
-
-1. 基本信息（状态、类型、CWE-ID、DKTSS 评分）
-2. 触发条件
-3. 所需权限
-4. 漏洞原理
-5. 代码证据
-6. 调用链
-7. PoC
-8. 验证结果
-9. 修复建议
-
----
-
-### 🎯 DKTSS 评分体系
-
-DKTSS（DarkKnight Threat Scoring System）是比 CVSS 更贴合实战的漏洞优先级评分标准。
-
-**核心公式**：
-
-```
-Score = Base - Friction + Weapon + Ver
-```
-
-| 维度 | 说明 |
-|------|------|
-| **Base** | 漏洞类型 + 实际影响 |
-| **Friction** | 实战阻力（访问路径/权限门槛/交互复杂度） |
-| **Weapon** | 武器化程度 |
-| **Ver** | 版本因子 |
-
-**评分示例**：
-
-| 漏洞 | CVSS | DKTSS | 分析 |
-|------|------|-------|------|
-| 后台 SQL 注入 | 8.8 (High) | 6 (Medium) | 需要管理员权限，实战优先级降低 |
-| 前台 Velocity SSTI | 9.8 (Critical) | 10 (Critical) | 无需认证 + 现成 EXP |
-| 内网 SSRF | 7.5 (High) | 5 (Medium) | 需要内网访问 |
-
-**严重程度等级**：
-
-| DKTSS | 等级 | 响应时效 |
-|-------|------|----------|
-| 9-10 | Critical | 24h 内 |
-| 7-8 | High | 7 天内 |
-| 5-6 | Medium | 30 天内 |
-| 3-4 | Low | 90 天内 |
-
----
-
-### 🔍 覆盖的漏洞类型
-
-#### P0 级（严重）- Semgrep 规则
-
-| 类型 | 具体漏洞 |
-|------|---------|
-| **反序列化** | Fastjson、Jackson、XStream、Hessian、SnakeYAML、Java原生序列化 |
-| **SSTI** | Velocity、FreeMarker、Thymeleaf、Pebble |
-| **表达式注入** | SpEL、OGNL、MVEL |
-| **JNDI 注入** | InitialContext.lookup、JdbcRowSetImpl |
-| **命令执行** | Runtime.exec、ProcessBuilder |
-
-#### P1 级（高危）- Semgrep 规则 + 代码分析
-
-| 类型 | 具体漏洞 | 检测方式 |
-|------|---------|----------|
-| **SQL 注入** | MyBatis `${}`、JDBC 原生拼接、JPA/HQL 注入 | Semgrep |
-| **SSRF** | URL 类、HttpClient、RestTemplate、WebClient | Semgrep |
-| **文件操作** | 路径穿越、任意文件上传/读取/写入 | Semgrep |
-| **XXE** | DocumentBuilder、SAXParser、XMLReader | Semgrep |
-| **越权** | 水平越权、垂直越权 | 代码分析 |
-| **业务逻辑** | 支付金额篡改、库存并发 | 代码分析 |
-
-#### P2 级（中危）- Semgrep 规则 + 配置分析
-
-| 类型 | 具体漏洞 | 检测方式 |
-|------|---------|----------|
-| **认证授权** | 越权访问、认证绕过、Session 固定、弱密码策略 | Semgrep + 代码分析 |
-| **加密安全** | 弱哈希算法、硬编码密钥、不安全随机数 | Semgrep |
-| **信息泄露** | 敏感信息日志、错误信息暴露、配置文件泄露 | Semgrep |
-| **配置安全** | Debug 模式、Swagger 暴露、Actuator 暴露 | Semgrep + 配置分析 |
-
-**Semgrep 规则统计**: 314 条规则，覆盖传统漏洞、新兴技术、微服务安全、组件配置等
-
-#### 依赖安全 - 版本分析
-
-读取 `pom.xml`/`build.gradle`，检查以下依赖版本：
-
-| 依赖 | 危险版本 | 安全版本 |
-|------|----------|----------|
-| Log4j2 | < 2.17.1 | ≥ 2.17.1 |
-| Fastjson | < 1.2.83 | ≥ 1.2.83 或 2.x |
-| Shiro | < 1.13.0 | ≥ 1.13.0 |
-| Spring | < 5.3.18 | ≥ 5.3.18 |
-
----
-
-### 🚀 快速开始
-
-#### 前置要求
-
-- Python 3.8+
-- ripgrep (`rg`)
-- Semgrep（可选，用于 Layer 1 扫描）
-
-#### 安装
-
-```bash
-# 克隆仓库
-git clone https://github.com/AuroraProudmoore/java-audit-skill.git
-cd java-audit-skill
-
-# 安装依赖
-pip install -r requirements.txt
-```
-
-#### 使用方式
-
-**方式一：作为 OpenClaw Skill 使用**
-
-将项目放置在 `~/.openclaw/workspace/skills/java-audit-skill/` 目录下，在对话中触发：
-
-```
-帮我审计这个 Java 项目：/path/to/project
-```
-
-**方式二：独立使用脚本**
-
-**Linux/macOS:**
-
-```bash
-# Phase 0: 代码度量
-python scripts/java_audit.py /path/to/project
-
-# 度量 + Layer 1 预扫描
-python scripts/java_audit.py /path/to/project --scan
-
-# 度量 + Tier 分类 + 场景标签
-python scripts/java_audit.py /path/to/project --tier --scenario
-
-# 全部执行
-python scripts/java_audit.py /path/to/project --scan --tier --scenario
-
-# 覆盖率检查
-python scripts/java_audit.py /path/to/project --coverage --reviewed-file reviewed.md
-
-# 输出 SARIF 格式（用于 GitHub Code Scanning）
-python scripts/java_audit.py /path/to/project --scan --output sarif
-```
-
-**Windows:**
-
-```powershell
-# Phase 0: 代码度量
-python scripts\java_audit.py C:\path\to\project
-
-# 度量 + Layer 1 预扫描
-python scripts\java_audit.py C:\path\to\project --scan
-
-# 度量 + Tier 分类 + 场景标签
-python scripts\java_audit.py C:\path\to\project --tier --scenario
-
-# 全部执行
-python scripts\java_audit.py C:\path\to\project --scan --tier --scenario
-
-# 覆盖率检查
-python scripts\java_audit.py C:\path\to\project --coverage --reviewed-file reviewed.md
-```
-
-**注意**：Windows 用户推荐使用 Python 脚本（`java_audit.py`），Shell 脚本（`.sh` 文件）需要在 Git Bash 或 WSL 中运行。
-
-**新增参数说明**：
-
-| 参数 | 说明 |
-|------|------|
-| `--scenario` | 生成 API 场景标签（scenario-tags.json），包含 API 端点、场景类型、风险等级 |
-
-**查看帮助：**
-
-```bash
-python scripts/java_audit.py --help
-```
-
-**注意**：Shell 脚本（`.sh` 文件）仍保留在 `scripts/` 目录中，供 Linux/macOS 用户在需要时使用。
-
----
-
-### 📚 审计方法论
-
-#### AI 代码审计 6 大核心方法
-
-| 方法 | 说明 | 适用漏洞 |
-|------|------|----------|
-| **语义化规则匹配** | 识别业务含义，适配任意命名规范 | 越权、未授权访问、验证码绕过 |
-| **因果推理审计** | 构建业务状态机，反事实推理 | 流程绕过、状态跳转 |
-| **权限一致性审计** | 水平/垂直/一致性三维校验 | 越权漏洞 |
-| **边界条件对抗** | 基于业务语义生成测试用例 | 支付漏洞、库存漏洞 |
-| **漏洞链推理** | 自动串联可利用的漏洞点 | 组合攻击链 |
-| **逻辑缺陷审计** | 白盒扫描高频缺陷模式 | 权限缺失、异常处理错误 |
-
-#### 长上下文 5 层解决方案
-
-| 层级 | 方案 | 效果 |
-|------|------|------|
-| 1 | 源头治理（过滤注释/测试/第三方库） | 降低 60%+ 上下文 |
-| 2 | 三层递进式架构 | 模块级 32K-64K |
-| 3 | 结构化语义压缩 | 降低 70%+ Token |
-| 4 | RAG + 多轮对话 | 突破窗口物理限制 |
-| 5 | 增量审计（Git diff） | 减少 90%+ 上下文 |
-
----
-
-### ⚠️ 5 大落地误区
-
-| 误区 | 问题 | 正确做法 |
-|------|------|----------|
-| ❌ 简单按行数拆分 | 破坏代码语义关联 | 按业务边界、依赖关系拆分 |
-| ❌ 过度依赖长窗口 | 超过 128K 后注意力衰减 | 中等窗口 + 裁剪分块 + RAG |
-| ❌ 全量代码丢给 AI | 上下文溢出、误报飙升 | 完成过滤与风险分级 |
-| ❌ 完全抛弃传统工具 | LLM 存在幻觉问题 | 传统工具 + AI + 传统验证 |
-| ❌ 只关注已知漏洞 | 浪费 AI 核心能力 | 聚焦业务逻辑漏洞 |
-
----
-
-### 📖 参考文档
+## 📚 参考文档
 
 | 文档 | 说明 |
 |------|------|
 | [SKILL.md](SKILL.md) | 完整协议文档 |
+| [REPORT-RULES.md](REPORT-RULES.md) | 报告输出规范 |
 | [references/dktss-scoring.md](references/dktss-scoring.md) | DKTSS 评分体系 |
 | [references/vulnerability-conditions.md](references/vulnerability-conditions.md) | 漏洞成立条件 |
-| [references/logic-vulnerability-cot.md](references/logic-vulnerability-cot.md) | 逻辑漏洞 CoT 四步推理 |
-| [references/business-scenario-tags.md](references/business-scenario-tags.md) | 业务场景标签系统 |
 | [references/security-checklist.md](references/security-checklist.md) | 安全检查清单 |
 | [references/report-template.md](references/report-template.md) | 报告模板 |
 
 ---
 
-### 🤝 贡献指南
+## 🤝 贡献指南
 
 欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
 
 **贡献方向**：
-
 - 🐛 报告 Bug
 - 💡 提出新功能建议
 - 📝 改进文档
@@ -435,15 +508,15 @@ python scripts/java_audit.py --help
 
 ---
 
-### 📄 许可证
+## 📄 许可证
 
 本项目采用 [MIT License](LICENSE) 开源协议。
 
 ---
 
-<a name="english"></a>
+<a name="english-documentation"></a>
 
-## 📖 English Documentation
+## English Documentation
 
 ### Overview
 
@@ -451,310 +524,141 @@ python scripts/java_audit.py --help
 
 **Core Value**: Solves the three main pain points of using LLMs for code auditing—**low coverage, high hallucination, and chaotic prioritization**.
 
-> **LLMs have capability but lack discipline.** This framework doesn't teach LLMs "what is SQL injection"—they already know. It equips them with the work framework of senior auditors: defining workflows, allocating resources, setting guardrails, and standardizing outputs.
+> **LLMs have capability but lack discipline.** This framework doesn't teach LLMs "what is SQL injection"—it equips them with the work framework of senior auditors.
 
 ---
 
-### ✨ Key Features
+## ✨ Core Features
 
-| Feature | Description |
-|---------|-------------|
-| 🔄 **6-Phase Audit Pipeline** | From code metrics to standardized reports, each phase has clear inputs, outputs, and quality standards |
-| 📊 **Multi-Layer Audit Architecture** | Pre-scan + Dual-track audit + CoT reasoning + Semantic verification |
-| 🚧 **Coverage Gate** | Enforces 100% code coverage, solving LLM's tendency to skip "unimportant code" |
-| 🎯 **DKTSS Scoring System** | Vulnerability priority scoring more practical than CVSS |
-| 🛡️ **Anti-Hallucination Mechanism** | 7 iron rules ensure report credibility (including CVE verification, line number validation) |
-| 🔗 **Call Chain Tracing** | Supports LSP semantic-level tracing with file:line annotations |
-
----
-
-### 🎯 Use Cases
-
-- ✅ **0-day vulnerability hunting** in Java/Kotlin projects
-- ✅ **Security audits** for enterprise codebases
-- ✅ **CI/CD integration** for early vulnerability detection
-- ✅ Security team standardization
-- ✅ Security training and methodology learning
-
----
-
-### ⚙️ 6-Phase Audit Pipeline
+### 1. 🔄 6-Phase Audit Pipeline
 
 ```
-Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 4 → Phase 5
- Metrics    Recon     Audit     Coverage    Verify    Rules    Report
+Phase 0 → Phase 1 → Phase 2 → Phase 2.5 → Phase 3 → Phase 5 → Phase 4 (Optional)
+ Metrics    Recon     Audit     Coverage    Verify    Report    Rules
 ```
 
-#### Phase 0: Code Metrics
+### 2. 📊 Multi-Layer Audit Architecture
 
-Measure project scale and calculate audit workload.
-
-**Output**: `metrics.json`
-
-```json
-{
-  "total_loc": 131000,
-  "java_files": 847,
-  "controllers": 40,
-  "modules": 5,
-  "complexity_score": "HIGH"
-}
-```
-
-#### Phase 1: Reconnaissance & EALOC Allocation
-
-**Tier Classification Rules**:
-
-| Tier | Condition | Analysis Depth |
-|------|-----------|----------------|
-| T1 | Controller / Filter / Servlet | Full depth analysis |
-| T2 | Service / DAO / Util | Focus on key dimensions |
-| T3 | Entity / VO / DTO | Quick pattern matching |
-| SKIP | Third-party library source | Skip audit |
-
-**EALOC Formula**: `EALOC = T1_LOC × 1.0 + T2_LOC × 0.5 + T3_LOC × 0.1`
-
-**Agent Allocation**: `Agents = ceil(EALOC / 15000)`
-
-#### Phase 2: Multi-Layer Audit Architecture
-
-| Layer | Content | Tools |
-|-------|---------|-------|
-| **Layer 1** | Full pre-scan (no LLM) | ripgrep + Semgrep |
+| Layer | Purpose | Tool |
+|-------|---------|------|
+| **Layer 1** | Full pre-scan | grep / Select-String |
 | **Layer 2** | Dual-track audit | LLM |
-| **Layer 2-Deep** | CoT reasoning (logic vulnerabilities) | LLM |
-| **Layer 3** | Call chain semantic verification | LSP / Grep |
+| **Layer 2-Deep** | CoT reasoning | LLM |
+| **Layer 3** | Call chain verification | Read |
 
-**Dual-Track Audit Model**:
+### 3. 🚧 Coverage Gate
 
-```
-Track 1 (Sink-driven):    Dangerous code ← Trace source ← User input
-Track 2 (Control-driven): Endpoint entry → Check permissions → Business logic
-```
+| Project Size | EALOC | Coverage Requirement |
+|--------------|-------|---------------------|
+| Small | < 15,000 | **100%** |
+| Medium | 15,000 - 50,000 | **95%** |
+| Large | > 50,000 | **90%** |
 
-> **Why dual tracks?** Authentication bypass vulnerabilities cannot be found with Sink-driven alone—they're not a problematic line of code, but a missing permission check at an endpoint.
-
-#### Phase 2.5: Coverage Gate (Core Innovation)
-
-**This is the core design against LLM's nature**—LLMs tend to skip "seemingly unimportant" code, while vulnerabilities love to hide there.
-
-**Gate Rules**:
-
-- Each Agent must output a "Reviewed Files List"
-- Diff the list against actual files
-- **Coverage < 100% → Phase 3 blocked**
-
-#### Phase 3: Verification & DKTSS Scoring
-
-**7 Anti-Hallucination Iron Rules**:
-
-1. Must verify file exists before reporting vulnerability
-2. Code snippets must come from actual files, no fabrication
-3. Every hop in call chain must have **file:line** annotation
-4. Uncertain findings marked as `HYPOTHESIS`, never `CONFIRMED`
-5. **Better to miss than to false positive**
-6. **CVE numbers must be verified online, no fabrication from memory**
-7. **Line numbers must be verified with Read, no fuzzy ranges or guessing**
-
-#### Phase 4: Semgrep Rule Generation
-
-Convert confirmed vulnerability patterns to Semgrep rules for CI/CD integration.
-
-```yaml
-rules:
-  - id: velocity-ssti
-    patterns:
-      - pattern: Velocity.evaluate($CONTEXT, $WRITER, $NAME, $USER_INPUT)
-    message: User-controllable Velocity template input detected, SSTI risk
-    severity: ERROR
-    languages: [java]
-```
-
-#### Phase 5: Standardized Report
-
-**9 Required Field Groups**:
-
-1. Basic Info (status, type, CWE-ID, DKTSS score)
-2. Trigger Conditions
-3. Required Privileges
-4. Vulnerability Principle
-5. Code Evidence
-6. Call Chain
-7. PoC
-8. Verification Results
-9. Remediation
-
----
-
-### 🎯 DKTSS Scoring System
-
-DKTSS (DarkKnight Threat Scoring System) is a vulnerability priority scoring standard more practical than CVSS.
-
-**Core Formula**:
+### 4. 🎯 DKTSS Scoring
 
 ```
 Score = Base - Friction + Weapon + Ver
 ```
 
-| Dimension | Description |
-|-----------|-------------|
-| **Base** | Vulnerability type + actual impact |
-| **Friction** | Practical resistance (access path / privilege threshold / interaction complexity) |
-| **Weapon** | Weaponization level |
-| **Ver** | Version factor |
+### 5. 🛡️ Anti-Hallucination (7 Iron Rules)
 
-**Scoring Example**:
-
-| Vulnerability | CVSS | DKTSS | Analysis |
-|---------------|------|-------|----------|
-| Admin SQL Injection | 8.8 (High) | 6 (Medium) | Requires admin privileges, lowers practical priority |
-| Frontend Velocity SSTI | 9.8 (Critical) | 10 (Critical) | No auth required + existing exploit |
-| Internal SSRF | 7.5 (High) | 5 (Medium) | Requires internal network access |
-
-**Severity Levels**:
-
-| DKTSS | Level | Response Time |
-|-------|-------|---------------|
-| 9-10 | Critical | Within 24h |
-| 7-8 | High | Within 7 days |
-| 5-6 | Medium | Within 30 days |
-| 3-4 | Low | Within 90 days |
+1. Must verify file exists
+2. Code must come from actual Read output
+3. Every hop must have file:line annotation
+4. Mark uncertain findings as HYPOTHESIS
+5. Better to miss than false positive
+6. **CVE numbers must be verified online**
+7. **Line numbers must be verified with Read**
 
 ---
 
-### 🔍 Covered Vulnerability Types
+## 🚀 Quick Start
 
-#### P0 (Critical)
-
-| Category | Specific Vulnerabilities |
-|----------|-------------------------|
-| **Deserialization** | Fastjson, Jackson, XStream, Hessian, SnakeYAML, Java native serialization |
-| **SSTI** | Velocity, FreeMarker, Thymeleaf, Pebble |
-| **Expression Injection** | SpEL, OGNL, MVEL |
-| **JNDI Injection** | InitialContext.lookup, JdbcRowSetImpl |
-| **Command Execution** | Runtime.exec, ProcessBuilder |
-
-#### P1 (High)
-
-| Category | Specific Vulnerabilities |
-|----------|-------------------------|
-| **SQL Injection** | MyBatis `${}`, JDBC native concatenation, JPA/HQL injection |
-| **SSRF** | URL class, HttpClient, RestTemplate, WebClient |
-| **File Operations** | Path traversal, arbitrary file upload/read/write |
-
-#### P2 (Medium)
-
-| Category | Specific Vulnerabilities |
-|----------|-------------------------|
-| **Authentication/Authorization** | Access bypass, auth bypass, session fixation, weak password policy |
-| **Cryptography** | Weak hashing, hardcoded keys, insecure random numbers |
-| **Information Disclosure** | Sensitive logs, error exposure, config file leaks |
-
----
-
-### 🚀 Quick Start
-
-#### Prerequisites
+### Requirements
 
 - Python 3.8+
-- ripgrep (`rg`)
-- Semgrep (optional, for Layer 1 scanning)
+- PowerShell 5.0+
+- Semgrep (optional)
 
-#### Installation
+### Installation
 
 ```bash
 # Clone repository
 git clone https://github.com/AuroraProudmoore/java-audit-skill.git
-cd java-audit-skill
 
-# Install dependencies
-pip install -r requirements.txt
+# Place in OpenClaw skills directory
+# Windows: C:\Users\<user>\.openclaw\workspace\skills\java-audit-skill\
+# Linux/macOS: ~/.openclaw/workspace/skills/java-audit-skill/
+
+# Install Semgrep (optional)
+pip install semgrep
 ```
 
-#### Usage
+### Usage
 
-**Option 1: As OpenClaw Skill**
-
-Place the project in `~/.openclaw/workspace/skills/java-audit-skill/` and trigger in conversation:
+**Option 1: As OpenClaw Skill (Recommended)**
 
 ```
-Help me audit this Java project: /path/to/project
+Help me audit this Java project: E:\project\demo
 ```
 
-**Option 2: Standalone Script Usage (Cross-Platform)**
+**Option 2: Standalone Scripts**
 
-```bash
-# Phase 0: Code metrics
-python scripts/java_audit.py /path/to/project
+```powershell
+# Phase 0: Metrics
+(Get-ChildItem -Recurse -Filter *.java).Count
 
-# Metrics + Layer 1 pre-scan
-python scripts/java_audit.py /path/to/project --scan
+# Phase 1: Reconnaissance
+Select-String -Pattern "@Controller|@RestController"
 
-# Metrics + Tier classification
-python scripts/java_audit.py /path/to/project --tier
+# Phase 2 Layer 1: Pre-scan
+Select-String -Pattern "Runtime\.getRuntime|JSON\.parseObject"
 
-# All features
-python scripts/java_audit.py /path/to/project --scan --tier
-
-# Coverage check
-python scripts/java_audit.py /path/to/project --coverage --reviewed-file reviewed.md
-
-# Output SARIF format (for GitHub Code Scanning)
-python scripts/java_audit.py /path/to/project --scan --output sarif
+# Phase 3: CVE Verification
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.107 CVE" -n 10
 ```
-
-**View help:**
-
-```bash
-python scripts/java_audit.py --help
-```
-
-**Note**: Shell scripts (`.sh` files) are still available in `scripts/` directory for Linux/macOS users who prefer them.
 
 ---
 
-### 📚 Methodology
+## 🔍 Vulnerability Coverage
 
-#### 6 Core Methods for AI Code Auditing
+### P0 (Critical)
 
-| Method | Description | Applicable Vulnerabilities |
-|--------|-------------|---------------------------|
-| **Semantic Rule Matching** | Identify business meaning, adapt to any naming convention | Authorization bypass, unauthorized access |
-| **Causal Reasoning Audit** | Build business state machine, counterfactual reasoning | Process bypass, state jumping |
-| **Permission Consistency Audit** | Horizontal/vertical/consistency 3D validation | Authorization vulnerabilities |
-| **Boundary Condition Adversarial** | Generate test cases based on business semantics | Payment vulnerabilities, inventory issues |
-| **Vulnerability Chain Reasoning** | Auto-chain exploitable vulnerability points | Combined attack chains |
-| **Logic Defect Audit** | White-box scan for high-frequency defect patterns | Missing permissions, exception handling errors |
+- Deserialization: Fastjson, Jackson, Hessian
+- SSTI: Velocity, FreeMarker, Thymeleaf
+- RCE: Runtime.exec, ProcessBuilder
 
----
+### P1 (High)
 
-### ⚠️ 5 Common Pitfalls
+- SQL Injection: MyBatis `${}`, JDBC concatenation
+- SSRF: URL, HttpClient, RestTemplate
+- File Operations: Path traversal, arbitrary upload
 
-| Pitfall | Problem | Correct Approach |
-|---------|---------|------------------|
-| ❌ Simple line-based splitting | Breaks code semantic relationships | Split by business boundaries and dependencies |
-| ❌ Over-reliance on long context | Attention degrades after 128K tokens | Medium context + chunking + RAG |
-| ❌ Throw all code at AI | Context overflow, high false positives | Complete filtering and risk grading |
-| ❌ Abandon traditional tools | LLMs have hallucination issues | Traditional tools + AI + traditional verification |
-| ❌ Focus only on known vulnerabilities | Wastes AI's core capability | Focus on business logic vulnerabilities |
+### P2 (Medium)
+
+- Authentication: Access bypass, auth bypass
+- Cryptography: Weak hashing, hardcoded keys
 
 ---
 
-### 🤝 Contributing
+## 📚 Documentation
 
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
-
-**Contribution Areas**:
-
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Contribute code
-- 📋 Share audit case studies
+| Document | Description |
+|----------|-------------|
+| [SKILL.md](SKILL.md) | Full protocol documentation |
+| [REPORT-RULES.md](REPORT-RULES.md) | Report output rules |
+| [references/dktss-scoring.md](references/dktss-scoring.md) | DKTSS scoring system |
+| [references/security-checklist.md](references/security-checklist.md) | Security checklist |
 
 ---
 
-### 📄 License
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+---
+
+## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
 

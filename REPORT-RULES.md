@@ -33,9 +33,11 @@ Phase 0 (度量) → Phase 1 (侦察) → Phase 2 (审计) → Phase 2.5 (覆盖
 | `audit-metrics.json` | 项目度量 | Phase 0 |
 | `tier-classification.md` | Tier 分类 | Phase 1 |
 | `scenario-tags.json` | API 场景标签 | Phase 1 |
+| `dependency-security.md` | 依赖安全检查 | Phase 1 |
 | `findings-raw.md` | 候选漏洞（未验证） | Phase 2 |
 | `findings-verified.md` | 验证后漏洞（已确认） | Phase 3 |
 | `audit-report.md` | 最终报告 | Phase 5 |
+| `custom-rules.yaml` | 自定义 Semgrep 规则 | Phase 4（可选） |
 
 **Layer 1 扫描输出**（`--scan` 参数）：
 - `p0-critical.md` - RCE/反序列化模式
