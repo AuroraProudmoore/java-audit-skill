@@ -23,12 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **SKILL.md Phase 5**: 简化报告格式说明，统一引用 `report-template.md`
 
+- **SKILL.md Layer 1**: 新增 **@InitBinder 分析指南**
+  - 4 步验证流程（继承关系、参数绑定、业务场景、DTO 字段）
+  - 正确结论格式模板
+  - 错误案例（2026-04-01 批量分配误报）
+
+- **report-template.md**: 新增 **漏洞分析写作规范**
+  - 7 步结构化分析格式
+  - 完整示例（@InitBinder、XXE）
+  - 新增 **批量分配/参数绑定验证检查清单**
+
 ### Added / 新增
 
 - **references/report-quick-ref.md**: 报告格式快速参考文档
   - 报告整体结构模板
   - 格式规范速查表
-  - 漏洞分析 6 要素
+  - 漏洞分析写作规范（200-300 字结构）
   - 代码位置格式要求
   - 禁止事项清单
   - 报告检查清单
@@ -39,6 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 漏洞详情三模块（代码位置、问题代码展示、漏洞分析）
   - 完整示例（XXE、Velocity SSTI）
   - 格式禁忌
+
+- **Semgrep 规则**: 新增 @InitBinder 检测规则
+  - `java-config-initbinder-empty-disallow`: 检测危险的 `setDisallowedFields(new String[]{})`
+  - `java-config-initbinder-missing-class-filter`: 检测 @InitBinder 配置
+
+### Fixed / 修复
+
+- **批量分配漏洞误报**: 修复 2026-04-01 审计中的错误
+  - 错误：报告"批量分配防护被覆盖"，但 Controller 未继承父类
+  - 教训：未验证继承关系、参数绑定方式、业务场景、攻击路径
+  - 修复：新增 4 步验证流程，更新文档和规则
 
 ### 报告格式对比
 

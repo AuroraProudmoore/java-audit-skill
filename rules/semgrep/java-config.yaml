@@ -1468,3 +1468,36 @@ rules:
     metadata:
       category: security
       cwe: "CWE-400"
+
+  # ============================================
+  # P2 - 组件配置安全 - @InitBinder
+  # ============================================
+  
+  - id: java-config-initbinder-empty-disallow
+    patterns:
+      - pattern-regex: 'setDisallowedFields\s*\(\s*new\s+String\[\]\s*\{\s*\}\s*\)'
+    paths:
+      include:
+        - "*.java"
+    message: "检测到危险的 @InitBinder 配置：setDisallowedFields(new String[]{})。该配置显式禁用 Spring 字段过滤机制。若存在参数绑定接口（@ModelAttribute 或无注解对象参数），可能导致批量分配漏洞或 Spring4Shell (CVE-2022-22965)。建议删除此配置或添加危险字段过滤。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-915"
+      references:
+        - https://spring.io/blog/2022/03/31/spring-framework-rce-early-announcement
+        - https://spring.io/security/cve-2022-22965
+
+  - id: java-config-initbinder-missing-class-filter
+    patterns:
+      - pattern-regex: '@InitBinder'
+    paths:
+      include:
+        - "*.java"
+    message: "检测到 @InitBinder 配置。建议检查是否禁用了危险字段：class.*, module.*, *.class.* 等。若配置 setDisallowedFields(new String[]{}) 则完全禁用防护，存在风险。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-15"
