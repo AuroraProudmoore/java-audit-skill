@@ -521,6 +521,9 @@ grep -rn "new Random\(\)\|Math\.random\(\)" --include="*.java" --include="*.kt"
 # 硬编码敏感信息
 grep -rn "password\s*=\s*\"\|secret\s*=\s*\"\|apiKey\s*=\s*\"" --include="*.java" --include="*.kt"
 grep -rn "jdbc:mysql://\|jdbc:oracle:" --include="*.java" --include="*.kt"  # 数据库连接字符串
+
+# @InitBinder 配置检查
+grep -rn "@InitBinder\|setDisallowedFields" --include="*.java" --include="*.kt"  # Spring 参数绑定配置
 ```
 
 **Windows (PowerShell):**
@@ -540,7 +543,67 @@ Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "new Random
 # 硬编码敏感信息
 Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "password\s*=\s*\"|secret\s*=\s*\"|apiKey\s*=\s*\""
 Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "jdbc:mysql://|jdbc:oracle:"  # 数据库连接字符串
+
+# @InitBinder 配置检查
+Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "@InitBinder|setDisallowedFields"  # Spring 参数绑定配置
 ```
+
+#### ⚠️ @InitBinder 分析指南（重要）
+
+当发现 `@InitBinder` 或 `setDisallowedFields` 时，**必须按以下步骤验证**：
+
+**Step 1：验证类继承关系**
+
+```powershell
+# 检查 Controller 是否继承了父类
+Select-String -Path $controllerFile -Pattern "class.*Controller.*extends|class.*Controller\s*\{"
+```
+
+| 情况 | 结论 |
+|------|------|
+| 继承父类 + 有自己的 `@InitBinder` | 可能是"覆盖" |
+| 未继承父类 + 有自己的 `@InitBinder` | 不是"覆盖"，是"新增配置" |
+
+**Step 2：验证参数绑定方式**
+
+```powershell
+# 检查接口参数注解
+Select-String -Path $controllerFile -Pattern "@RequestBody|@ModelAttribute|@RequestParam|public.*\("
+```
+
+| 参数注解 | 受 @InitBinder 影响 | 分析重点 |
+|---------|-------------------|---------|
+| `@RequestBody` | ❌ 否（JSON 反序列化） | 检查 DTO 字段 |
+| `@ModelAttribute` | ✅ 是 | 高风险，需详细分析 |
+| 无注解（对象参数） | ✅ 是 | 高风险，需详细分析 |
+| `@RequestParam` | ⚠️ 部分（单个字段） | 低风险 |
+
+**Step 3：验证业务场景**
+
+```powershell
+# 检查是否涉及用户管理
+Select-String -Path $files -Pattern "UserService|UserRepository|isAdmin|role|permission"
+```
+
+**Step 4：验证 DTO 字段**
+
+```powershell
+# 读取 DTO 类定义，检查字段
+Get-Content $dtoFile
+```
+
+**正确结论格式**：
+
+```markdown
+在 XxxController 中存在危险的 @InitBinder 配置：`binder.setDisallowedFields(new String[]{})`。
+当前该控制器有 X 个接口，其中 Y 个使用表单参数绑定（受影响），Z 个使用 @RequestBody（不受影响）。
+受影响的接口 DTO 只含 [字段列表]，无敏感字段。
+若后续新增参数绑定接口，可能存在批量分配风险。
+```
+
+**错误案例（2026-04-01）**：
+> 错误：报告"批量分配防护被覆盖"，但 Controller 未继承父类，且全部使用 @RequestBody。
+> 教训：未验证继承关系、参数绑定方式、业务场景、攻击路径。
 
 ### Layer 2: 双轨审计模型
 

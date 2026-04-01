@@ -664,6 +664,75 @@ Select-String -Pattern "class.*Controller.*extends|class.*Controller\s*\{"
 | 绕过了 X | X 真的存在吗？真的被绕过了吗？ |
 | 覆盖了 Y | Y 真的被继承了吗？ |
 
+#### 4. ⚠️ 批量分配/参数绑定验证（重要）
+
+当涉及 `@InitBinder`、`setDisallowedFields`、批量分配等描述时，**必须验证以下内容**：
+
+**Step 1：验证参数绑定方式**
+
+```powershell
+# 检查接口的参数注解
+Select-String -Path $controllerFile -Pattern "@RequestBody|@ModelAttribute|@RequestParam|public.*\("
+```
+
+| 参数注解 | 受 @InitBinder 影响 | 风险评估 |
+|---------|-------------------|---------|
+| `@RequestBody` | ❌ 否（JSON 反序列化） | 需检查 DTO 字段 |
+| `@ModelAttribute` | ✅ 是 | 高风险，需检查 |
+| 无注解（对象参数） | ✅ 是 | 高风险，需检查 |
+| `@RequestParam` | ⚠️ 部分（单个字段） | 低风险 |
+
+**Step 2：验证业务场景**
+
+| 问题 | 验证方法 |
+|------|---------|
+| 接口是否涉及用户管理？ | 搜索 `UserService`、`UserRepository`、`isAdmin` |
+| DTO 是否包含敏感字段？ | 读取 DTO 类定义 |
+| 接口是否写入数据库？ | 检查 Service 层是否有 `save`、`update`、`insert` |
+
+**Step 3：验证攻击路径**
+
+| 问题 | 验证方法 |
+|------|---------|
+| 攻击者能注入什么字段？ | 检查 DTO 所有字段 |
+| 注入后能保存吗？ | 检查 Service 层是否有数据库操作 |
+| 有敏感字段吗？ | 检查 `isAdmin`、`role`、`permission` 等 |
+
+**错误案例（2026-04-01）**：
+
+```
+❌ 错误结论：批量分配防护被覆盖，攻击者可注入 isAdmin
+
+❌ 未验证：
+1. 4 个 Controller 未继承 BaseController（不存在"覆盖"）
+2. 全部使用 @RequestBody（@InitBinder 无效）
+3. 没有接口操作用户数据（无攻击路径）
+4. DTO 无敏感字段（无注入价值）
+
+✅ 正确结论：
+HotelGroupBaseInfoController 存在危险的 @InitBinder 配置，
+但当前仅 1 个接口使用表单绑定，DTO 只有分页参数，无敏感字段。
+若未来新增参数绑定接口，可能存在风险。
+```
+
+**正确的分析流程**：
+
+```
+发现 @InitBinder 配置
+    ↓
+验证 1：类是否继承父类？（是"覆盖"还是"缺失"）
+    ↓
+验证 2：接口参数绑定方式？（@RequestBody 无效）
+    ↓
+验证 3：业务场景？（是否涉及敏感数据）
+    ↓
+验证 4：DTO 字段？（有无敏感字段）
+    ↓
+验证 5：攻击路径？（能否注入？能否保存？）
+    ↓
+综合评估：当前状态 + 风险场景
+```
+
 ### 验证命令速查
 
 ```powershell
