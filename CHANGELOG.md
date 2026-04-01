@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 9 | 入口点统计不完整 - 未覆盖原生 Servlet、Struts、Jersey 等框架 | 🟠 中 | ✅ 已修复 |
 | 10 | 审计流程问题 - Phase 4 位置、EALOC 时机、覆盖率回溯等 8 个问题 | 🔴 高 | ✅ 已修复 |
 | 11 | README.md 功能介绍和流程介绍不够详细 | 🟠 中 | ✅ 已修复 |
+| 12 | SKILL.md 流程细节问题 - 检查清单级别不一致、Phase 编号跳跃、Layer 命名不规范等 6 个问题 | 🟡 低 | ✅ 已修复 |
+| 13 | Layer 1 预扫描规则不完整 - 遗漏 SnakeYAML、XXE、LDAP 注入等 11 类危险模式 | 🟠 中 | ✅ 已修复 |
 
 ### Changed / 变更
 
@@ -84,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **审计流程**: 修复 8 个流程问题
   - Phase 4 移到 Phase 5 之后
   - Phase 0 添加 EALOC 计算
-  - Layer 2-Deep 明确执行时机
+  - Layer 2.5 明确执行时机
   - Phase 1 添加依赖安全检查
   - Phase 2.5 添加覆盖率回溯机制
   - Phase 3 添加与 Layer 3 区分说明
@@ -96,6 +98,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 使用介绍（环境要求、安装步骤、两种使用方式、具体命令示例）
   - 漏洞类型覆盖（P0/P1/P2 详细列表）
   - 中英文双语
+- **流程细节修复**: 6 个问题
+  - 检查清单 L3 → L4
+  - Phase 编号添加说明
+  - Layer 2-Deep → Layer 2.5
+  - EALOC 公式去重
+  - 入口点信息集中
+  - 输出文件添加可选说明
+- **Layer 1 规则扩展**: 从 10 类扩展到 21 类
+  - P0 新增：SnakeYAML、Kryo/FST、ScriptEngine、动态类加载、反射调用
+  - P1 新增：JPA/HQL 注入、XXE、LDAP 注入、路径穿越、开放重定向、日志注入
+  - P2 新增：弱加密算法、不安全随机数、硬编码敏感信息
 
 ### Improved / 改进
 
