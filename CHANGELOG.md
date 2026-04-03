@@ -32,7 +32,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 新增检查示例（httpclient 4.5.12）
   - 更新 CVE 核实铁律
 
+- **SKILL.md Phase 2.5 覆盖率门禁**: 新增质量校验自动化
+  - 新增校验脚本使用说明
+  - 新增校验阶段与检查项表格
+  - 新增自动化流程说明
+
 ### Added / 新增
+
+- **scripts/quality-checker.ps1**: Windows PowerShell 质量校验脚本
+  - 支持 phase1, phase2-layer1, phase2-layer2, phase25, phase3, phase5, all
+  - 11 项校验规则
+  - 彩色输出（成功/错误/警告）
+  - 错误计数和退出码
+
+- **scripts/quality-checker.sh**: Linux/macOS Bash 质量校验脚本
+  - 与 PowerShell 版本功能一致
+  - 跨平台支持
 
 - **dependency-security.md 输出模板**: 标准化的依赖安全检查报告格式
   - 组件信息表格（groupId、artifactId、当前版本、Direct vulnerabilities、安全版本、状态）
@@ -68,6 +83,17 @@ Step 3: 检查当前版本是否有 "Direct vulnerabilities" 标记
 Step 4: 在版本列表中找到无标记的最新版本
 ```
 
+### 质量校验架构
+
+```
+Phase 1 执行完成 → quality-checker.sh phase1 → 通过/不通过
+Phase 2 Layer 1 执行完成 → quality-checker.sh phase2-layer1 → 通过/不通过
+Phase 2 Layer 2 执行完成 → quality-checker.sh phase2-layer2 → 通过/不通过
+Phase 2.5 执行完成 → quality-checker.sh phase25 → 通过/不通过
+Phase 3 执行完成 → quality-checker.sh phase3 → 通过/不通过
+Phase 5 执行完成 → quality-checker.sh phase5 → 通过/不通过
+```
+
 ### 示例
 
 | 组件 | 当前版本 | 页面显示 | 安全版本 |
@@ -79,8 +105,10 @@ Step 4: 在版本列表中找到无标记的最新版本
 
 ```
 modified:   CHANGELOG.md
-modified:   SKILL.md (Phase 1.4, Phase 2 Layer 2)
+modified:   SKILL.md (Phase 1.4, Phase 2 Layer 2, Phase 2.5)
 rewritten:  references/cve-offline-lookup.md
+new file:   scripts/quality-checker.ps1
+new file:   scripts/quality-checker.sh
 ```
 
 ---

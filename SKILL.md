@@ -1037,6 +1037,76 @@ foreach ($file in $missingFiles) {
 
 **阈值说明**：见上门禁阈值表，按项目规模分级执行。T1 文件必须 100% 覆盖。
 
+### 质量校验自动化
+
+每个阶段输出后，自动运行质量校验脚本检查输出质量。
+
+#### 校验脚本
+
+```bash
+# Linux/macOS
+./scripts/quality-checker.sh <phase> <project_path>
+
+# Windows PowerShell
+.\scripts\quality-checker.ps1 -Phase <phase> -ProjectPath <project_path>
+
+# 全量校验
+./scripts/quality-checker.sh all /path/to/project
+```
+
+#### 校验阶段与检查项
+
+| 阶段 | 校验项 | 不通过条件 |
+|------|--------|-----------|
+| **phase1** | EALOC 计算 | 缺失 |
+| **phase1** | Tier 分类 | 缺失或 T1=0 |
+| **phase2-layer1** | 危险模式文件 | p0/p1/p2 全缺失 |
+| **phase2-layer2** | 精确行号 | 无 `文件:行号` 格式 |
+| **phase2-layer2** | 调用链分析 | 0 个调用链 |
+| **phase25** | 覆盖率 | 总体 < 90% |
+| **phase25** | T1 覆盖率 | < 100% |
+| **phase3** | CONFIRMED/HYPOTHESIS | 无状态标记 |
+| **phase3** | DKTSS 评分 | 缺失 |
+| **phase5** | 报告结构 | 缺少漏洞列表/审计进度 |
+| **phase5** | 完整路径 | 代码位置非绝对路径 |
+| **phase5** | 标题格式 | 包含严重程度标签 |
+
+#### 自动化流程
+
+```
+Phase 1 执行完成
+  ↓ 自动运行
+  quality-checker.sh phase1 /project/path
+  ↓
+  通过 → 继续执行 Phase 2
+  不通过 → 返回 Phase 1 补充
+  
+Phase 2 Layer 1 执行完成
+  ↓ 自动运行
+  quality-checker.sh phase2-layer1 /project/path
+  ↓
+  通过 → 继续执行 Layer 2
+  不通过 → 检查扫描命令
+  
+...以此类推...
+```
+
+#### 校验示例
+
+```bash
+# Phase 5 报告校验
+$ ./scripts/quality-checker.sh phase5 /path/to/project
+
+[*] Phase 5 质量校验...
+[✓] 「漏洞列表」部分存在
+[✓] 「审计进度」部分存在
+[✓] 代码位置格式正确（完整绝对路径）
+[✓] 标题格式正确（无严重程度标签）
+[✓] 调用链分析完整
+[✓] 修复建议存在
+[*] Phase 5 校验完成: 0 错误, 0 警告
+```
+
 ---
 
 ## Phase 3: 漏洞验证 & DKTSS 评分
