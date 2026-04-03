@@ -5,6 +5,86 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-04-03
+
+### Changed / 变更
+
+- **依赖安全检查重构**: 删除离线 CVE 规则表，改为 mvnrepository.com 联网核实
+  - 旧方案：离线规则表 → tavily 搜索 CVE → NVD/Snyk 确认
+  - 新方案：mvnrepository.com → 检查 "Direct vulnerabilities" → 找安全版本
+
+- **references/cve-offline-lookup.md**: 完全重写
+  - 删除所有离线 CVE 规则表（Log4j、Fastjson、Shiro 等 30+ 组件）
+  - 改为 mvnrepository.com 联网核实指南
+  - 新增查询 URL 格式、漏洞标记识别方法
+  - 新增高优先级检查组件表
+
+- **SKILL.md Phase 1.4 依赖安全检查**: 更新检查流程
+  - Step 1: 读取 pom.xml/build.gradle 提取依赖版本
+  - Step 2: 构建 mvnrepository.com 查询 URL
+  - Step 3: 使用 tavily + web_fetch 查询组件页面
+  - Step 4: 检查 "Direct vulnerabilities" 标记
+  - Step 5: 找到无漏洞的安全版本
+
+- **SKILL.md Phase 2 Layer 2 依赖安全检查**: 同步更新
+  - 更新检查方法说明
+  - 新增执行命令示例
+  - 新增检查示例（httpclient 4.5.12）
+  - 更新 CVE 核实铁律
+
+### Added / 新增
+
+- **dependency-security.md 输出模板**: 标准化的依赖安全检查报告格式
+  - 组件信息表格（groupId、artifactId、当前版本、Direct vulnerabilities、安全版本、状态）
+  - 详细检查记录（检查 URL、当前版本状态、安全版本、建议）
+  - 离线环境处理说明
+
+### Removed / 删除
+
+- **离线 CVE 规则表**: 删除 `references/cve-offline-lookup.md` 中的所有离线规则
+  - 原因：规则过时、维护成本高、数据不准确、覆盖有限
+  - 替代方案：直接查询 mvnrepository.com 获取准确的漏洞信息
+
+### Fixed / 修复
+
+- **CVE 信息准确性问题**: 通过直接查询 mvnrepository.com 官方数据源解决
+- **安全版本不准确问题**: 在版本列表中寻找无 "Direct vulnerabilities" 标记的最新版本
+
+### 改进原因
+
+| 问题 | 影响 |
+|------|------|
+| 规则过时 | 新 CVE 不断发布，离线规则无法及时更新 |
+| 维护成本高 | 需要人工持续跟踪数百个组件 |
+| 数据不准确 | 版本范围、修复版本可能变化 |
+| 覆盖有限 | 无法覆盖所有依赖组件 |
+
+### 新检查流程
+
+```
+Step 1: 提取依赖: groupId + artifactId + version
+Step 2: 访问: https://mvnrepository.com/artifact/{groupId}/{artifactId}
+Step 3: 检查当前版本是否有 "Direct vulnerabilities" 标记
+Step 4: 在版本列表中找到无标记的最新版本
+```
+
+### 示例
+
+| 组件 | 当前版本 | 页面显示 | 安全版本 |
+|------|----------|----------|----------|
+| httpclient | 4.5.12 | `Direct vulnerabilities: CVE-2020-13956` | 4.5.14+ |
+| log4j-core | 2.17.1 | 无标记 | ✅ 安全 |
+
+### 文件变更
+
+```
+modified:   CHANGELOG.md
+modified:   SKILL.md (Phase 1.4, Phase 2 Layer 2)
+rewritten:  references/cve-offline-lookup.md
+```
+
+---
+
 ## [1.8.0] - 2026-04-01
 
 ### 用户确认

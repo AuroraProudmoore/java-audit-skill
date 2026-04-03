@@ -295,50 +295,135 @@ Select-String -Pattern "@Controller|@RestController|@WebServlet|extends HttpServ
 
 **执行时机**：在 Phase 1 读取 pom.xml/build.gradle 时，同步检查依赖安全。
 
-#### 检查流程
+#### 检查流程（mvnrepository.com 联网核实）
+
+**核心理念**：不再依赖离线规则表，直接查询 Maven 仓库官方数据，获取准确的漏洞信息。
 
 ```
-Step 1: 读取 pom.xml 提取依赖版本
+Step 1: 读取 pom.xml/build.gradle 提取依赖版本
   ↓
-Step 2: 使用 tavily 搜索 CVE
+Step 2: 构建 mvnrepository.com 查询 URL
   ↓
-Step 3: 确认漏洞真实性（NVD/Snyk）
+Step 3: 使用 tavily + web_fetch 查询组件页面
   ↓
-Step 4: 标记需要升级的依赖
+Step 4: 检查 "Direct vulnerabilities" 标记
+  ↓
+Step 5: 找到无漏洞的安全版本
 ```
 
-#### 检查命令（必须使用 tavily）
+#### mvnrepository.com 查询方法
+
+**URL 格式**：
+```
+https://mvnrepository.com/artifact/{groupId}/{artifactId}
+```
+
+**示例 URL**：
+```
+https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
+https://mvnrepository.com/artifact/com.alibaba/fastjson
+https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
+https://mvnrepository.com/artifact/org.apache.shiro/shiro-core
+```
+
+**页面漏洞标记识别**：
+- 有漏洞版本：显示 `Direct vulnerabilities: CVE-XXXX-XXXXX`
+- 安全版本：无 `Direct vulnerabilities` 标记
+
+#### 执行命令
+
+**方式一：tavily 搜索定位 + web_fetch 提取**
 
 ```bash
-# 使用 tavily 搜索 CVE 漏洞信息
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE vulnerability" -n 10
+# 1. tavily 搜索组件 mvnrepository 页面
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "mvnrepository {groupId} {artifactId}" -n 5
 
-# 示例
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.107 CVE" -n 10
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "fastjson 1.2.79 vulnerability" -n 10
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
+# 2. web_fetch 提取页面内容
+# 在 OpenClaw 中使用 web_fetch 工具访问组件页面
+```
+
+**方式二：直接 web_fetch 组件页面**
+
+```
+访问 https://mvnrepository.com/artifact/{groupId}/{artifactId}
+
+在页面内容中搜索：
+- "Direct vulnerabilities" → 存在漏洞
+- 无此标记 → 安全版本
 ```
 
 #### ⚠️ CVE 核实铁律
 
-1. **禁止凭记忆编造 CVE 编号** - 必须联网核实
-2. **必须确认 CVE 真实存在** - 从 NVD、Snyk 官方数据源确认
-3. **必须确认影响版本范围** - 不同版本可能有不同影响
-4. **必须确认组件对应关系** - 某个 CVE 可能只影响特定框架
+1. **禁止凭记忆编造 CVE 编号或安全版本** - 必须联网核实
+2. **必须使用 mvnrepository.com 官方数据** - 这是最准确的来源
+3. **必须检查 "Direct vulnerabilities" 标记** - 不是间接依赖漏洞
+4. **必须找到无漏洞的安全版本** - 在版本列表中寻找无标记的最新版本
 
-#### 关键依赖检查清单
+#### 检查示例：httpclient 4.5.12
 
-| 依赖 | 危险版本 | 安全版本 | 检查命令 |
-|------|----------|----------|----------|
-| Log4j2 | < 2.17.1 | ≥ 2.17.1 | tavily: "log4j2 CVE" |
-| Fastjson | < 1.2.83 | ≥ 1.2.83 | tavily: "fastjson CVE" |
-| Shiro | < 1.13.0 | ≥ 1.13.0 | tavily: "shiro CVE" |
-| Spring | 检查版本 | 检查版本 | tavily: "spring framework CVE" |
-| Netty | < 4.1.129 | ≥ 4.1.129 | tavily: "netty CVE" |
+**Step 1**: 访问 `https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient`
 
-#### 输出
+**Step 2**: 检查版本列表：
+- 4.5.12: `Direct vulnerabilities: CVE-2020-13956` → ❌ 有漏洞
+- 4.5.13: `Direct vulnerabilities: CVE-2020-13956` → ❌ 有漏洞
+- 4.5.14: 无标记 → ✅ 安全版本
 
-- `dependency-security.md`: 依赖安全检查结果
+**结论**: 当前版本 4.5.12 存在漏洞，建议升级到 4.5.14+
+
+#### 高优先级检查组件
+
+以下组件历史上频繁出现高危漏洞，**必须逐一检查**：
+
+| 组件 | groupId | artifactId | 检查 URL |
+|------|---------|------------|----------|
+| Log4j2 | org.apache.logging.log4j | log4j-core | mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core |
+| Fastjson | com.alibaba | fastjson | mvnrepository.com/artifact/com.alibaba/fastjson |
+| Shiro | org.apache.shiro | shiro-core | mvnrepository.com/artifact/org.apache.shiro/shiro-core |
+| Jackson | com.fasterxml.jackson.core | jackson-databind | mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind |
+| HttpClient | org.apache.httpcomponents | httpclient | mvnrepository.com/artifact/org.apache.httpcomponents/httpclient |
+| Netty | io.netty | netty-all | mvnrepository.com/artifact/io.netty/netty-all |
+| Hessian | com.caucho | hessian | mvnrepository.com/artifact/com.caucho/hessian |
+| XStream | com.thoughtworks.xstream | xstream | mvnrepository.com/artifact/com.thoughtworks.xstream/xstream |
+| SnakeYAML | org.yaml | snakeyaml | mvnrepository.com/artifact/org.yaml/snakeyaml |
+| Commons Collections | commons-collections | commons-collections | mvnrepository.com/artifact/commons-collections/commons-collections |
+| Commons Text | org.apache.commons | commons-text | mvnrepository.com/artifact/org.apache.commons/commons-text |
+| Nacos | com.alibaba.nacos | nacos-core | mvnrepository.com/artifact/com.alibaba.nacos/nacos-core |
+| Dubbo | org.apache.dubbo | dubbo | mvnrepository.com/artifact/org.apache.dubbo/dubbo |
+
+#### 输出模板：dependency-security.md
+
+```markdown
+## 依赖安全检查报告
+
+**检查方法**：通过 mvnrepository.com 联网核实
+**检查时间**：YYYY-MM-DD
+
+| 组件 | groupId | artifactId | 当前版本 | Direct vulnerabilities | 安全版本 | 状态 |
+|------|---------|------------|----------|------------------------|----------|------|
+| httpclient | org.apache.httpcomponents | httpclient | 4.5.12 | CVE-2020-13956 | 4.5.14+ | ❌ 需升级 |
+| log4j-core | org.apache.logging.log4j | log4j-core | 2.17.1 | 无 | - | ✅ 安全 |
+| fastjson | com.alibaba | fastjson | 1.2.83 | 无 | - | ✅ 安全 |
+
+### 详细检查记录
+
+#### httpclient 4.5.12
+- 检查 URL: https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
+- 当前版本状态: Direct vulnerabilities: CVE-2020-13956
+- 安全版本: 4.5.14（无 Direct vulnerabilities 标记）
+- 建议: 升级到 4.5.14+
+
+#### log4j-core 2.17.1
+- 检查 URL: https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
+- 当前版本状态: 无 Direct vulnerabilities
+- 结论: 安全，无需升级
+```
+
+#### 离线环境处理
+
+**无法联网时**：
+1. 标记为 `HYPOTHESIS`：无法确认版本安全性
+2. 报告备注：注明"离线环境无法确认，建议联网后复查 mvnrepository.com"
+3. 保守评估：按"可能存在漏洞"处理，但不作为 CONFIRMED 漏洞
 
 ### 1.5 输出文件
 
@@ -741,69 +826,61 @@ Step 4: 漏洞结果判定 → 基于推演给出负责任结论
 
 #### 依赖安全检查
 
-⚠️ **必须使用 tavily 进行联网搜索**，禁止使用 web_search（Brave API）。
+⚠️ **必须通过 mvnrepository.com 联网核实**，不再使用离线规则表。
 
 ```
-检查要点：
-1. 读取 pom.xml/build.gradle
-2. 提取 Log4j、Fastjson、Shiro、Spring 等关键依赖版本
-3. 使用 tavily 搜索漏洞信息（见下方命令）
-4. 分析搜索结果中的 NVD、Snyk、官方公告
-5. 标记需要升级的依赖
+检查流程：
+1. 读取 pom.xml/build.gradle 提取依赖版本
+2. 构建 mvnrepository.com 查询 URL
+3. 使用 tavily + web_fetch 查询组件页面
+4. 检查当前版本的 "Direct vulnerabilities" 标记
+5. 找到无漏洞的安全版本
 ```
 
-**联网搜索命令（必须使用 tavily）**：
+**mvnrepository.com 查询方法**：
+
+```
+URL 格式: https://mvnrepository.com/artifact/{groupId}/{artifactId}
+
+示例:
+https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
+https://mvnrepository.com/artifact/com.alibaba/fastjson
+https://mvnrepository.com/artifact/org.apache.shiro/shiro-core
+```
+
+**漏洞标记识别**：
+- 有漏洞版本：页面显示 `Direct vulnerabilities: CVE-XXXX-XXXXX`
+- 安全版本：无 `Direct vulnerabilities` 标记
+
+**执行命令**：
 
 ```bash
-# 使用 tavily 搜索 CVE 漏洞信息
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "<组件名> <版本号> CVE vulnerability" -n 10
+# 方式一：tavily 搜索定位
+node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "mvnrepository {groupId} {artifactId}" -n 5
 
-# 示例
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "fastjson 1.2.79 vulnerability" -n 10
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "hessian 4.0.63 CVE" -n 10
-
-# 如需提取详细内容
-node ~/.openclaw/workspace/skills/tavily-search/scripts/extract.mjs "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
-node ~/.openclaw/workspace/skills/tavily-search/scripts/extract.mjs "https://security.snyk.io/vuln/SNYK-JAVA-..."
+# 方式二：直接 web_fetch 组件页面
+# 使用 OpenClaw 的 web_fetch 工具访问 mvnrepository.com 页面
 ```
 
-**搜索结果验证流程**：
+**检查示例**：
 
 ```
-发现依赖:
-  <dependency>
-    <groupId>org.apache.logging.log4j</groupId>
-    <artifactId>log4j-core</artifactId>
-    <version>2.14.1</version>
-  </dependency>
+发现依赖: httpclient 4.5.12
 
-Step 1: 使用 tavily 搜索
-  node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "log4j-core 2.14.1 CVE" -n 10
+Step 1: 访问 mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
 
-Step 2: 分析搜索结果
-  - 检查 NVD、Snyk、官方公告来源
-  - 确认 CVE 编号真实存在（禁止凭记忆编造）
-  - 确认影响版本范围
+Step 2: 检查版本列表:
+  - 4.5.12: Direct vulnerabilities: CVE-2020-13956 → ❌ 有漏洞
+  - 4.5.14: 无标记 → ✅ 安全版本
 
-Step 3: 提取详细信息（如有必要）
-  node ~/.openclaw/workspace/skills/tavily-search/scripts/extract.mjs "https://nvd.nist.gov/vuln/detail/CVE-2021-44228"
-
-分析结果:
-  - CVE-2021-44228 (Log4Shell) - ✅ 已从 NVD 官方确认
-  - CVSS: 10.0 Critical
-  - 影响版本: 2.0-beta9 to 2.15.0
-  - 修复版本: 2.17.1+
-
-结论: 需要升级到 2.17.1+
+结论: 需要升级到 4.5.14+
 ```
 
-**⚠️ CVE 编号核实铁律**：
+**⚠️ 核实铁律**：
 
-1. **禁止凭记忆编造 CVE 编号** - 必须联网核实
-2. **必须确认 CVE 真实存在** - 从 NVD、Snyk 官方数据源确认
-3. **必须确认影响版本范围** - 不同版本可能有不同影响
-4. **必须确认组件对应关系** - 某个 CVE 可能只影响特定框架（如 CVE-2020-1948 是 Dubbo 漏洞而非 Hessian 漏洞）
+1. **禁止凭记忆编造安全版本** - 必须在 mvnrepository.com 上核实
+2. **必须检查 "Direct vulnerabilities"** - 这是直接依赖漏洞，非间接依赖
+3. **必须找到无标记的安全版本** - 在版本列表中寻找无漏洞标记的最新版本
 
 #### 运行时配置
 
