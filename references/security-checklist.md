@@ -3,6 +3,12 @@
 **版本**: v1.0  
 **适用于**: java-audit-skill Phase 2 Layer 1-2
 
+> **相关文档**：
+> - 漏洞成立条件：[vulnerability-conditions.md](vulnerability-conditions.md)
+> - DKTSS 评分体系：[dktss-scoring.md](dktss-scoring.md)
+> - 业务场景标签：[business-scenario-tags.md](business-scenario-tags.md)
+> - 报告模板：[report-template.md](report-template.md)
+
 ---
 
 ## 使用说明
@@ -602,6 +608,185 @@ public class CorsConfig {
 
 ---
 
-**文档版本**: v1.0  
-**最后更新**: 2026-03-13  
+**文档版本**: v1.1  
+**最后更新**: 2026-04-03  
 **维护者**: java-audit-skill
+
+---
+
+## 20. 前端 XSS 安全检查
+
+### 20.1 DOM-based XSS
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 20.1.1 | innerHTML 使用 | `grep -rn "innerHTML\|outerHTML" --include="*.js" --include="*.ts"` | 严重 | 用户输入直接渲染 → XSS |
+| 20.1.2 | document.write | `grep -rn "document\.write\|document\.writeln" --include="*.js"` | 严重 | 存在 → XSS 风险 |
+| 20.1.3 | eval 使用 | `grep -rn "eval(\|new Function(" --include="*.js" --include="*.ts"` | 严重 | 用户输入入参 → 代码注入 |
+| 20.1.4 | setTimeout 字符串 | `grep -rn "setTimeout\s*\(\s*['\"]" --include="*.js"` | 高 | 字符串参数 → eval 执行 |
+| 20.1.5 | URL 参数直接使用 | `grep -rn "location\.hash\|location\.search\|URLSearchParams" --include="*.js"` | 高 | 未验证直接使用 → DOM XSS |
+
+### 20.2 React XSS
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 20.2.1 | dangerouslySetInnerHTML | `grep -rn "dangerouslySetInnerHTML" --include="*.jsx" --include="*.tsx"` | 严重 | 用户输入直接渲染 → XSS |
+| 20.2.2 | href 用户输入 | `grep -rn "href\s*=\s*{" --include="*.jsx" --include="*.tsx" \| grep -i "props\|state"` | 高 | href 注入 → XSS/重定向 |
+| 20.2.3 | javascript: 协议 | `grep -rn "href.*javascript:" --include="*.jsx" --include="*.tsx"` | 严重 | javascript: 协议 → XSS |
+| 20.2.4 | SSR 渲染 | `grep -rn "renderToString" --include="*.js" --include="*.ts"` | 高 | SSR 渲染用户输入 → XSS |
+
+### 20.3 Vue XSS
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 20.3.1 | v-html 指令 | `grep -rn "v-html" --include="*.vue"` | 严重 | 用户输入直接渲染 → XSS |
+| 20.3.2 | 动态模板 | `grep -rn "template\s*:" --include="*.vue" \| grep -i "props\|data"` | 严重 | 用户输入模板 → SSTI |
+| 20.3.3 | render 函数 | `grep -rn "render\s*:\s*function\|\$createElement" --include="*.vue"` | 高 | 手动渲染 → XSS 风险 |
+| 20.3.4 | 动态组件 | `grep -rn "<component\s+:is" --include="*.vue"` | 高 | 动态组件名 → 渲染恶意组件 |
+
+---
+
+## 21. 前端代码注入检查
+
+### 21.1 eval 相关
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 21.1.1 | eval 调用 | `grep -rn "eval(" --include="*.js" --include="*.ts"` | 严重 | 用户输入入参 → RCE |
+| 21.1.2 | new Function | `grep -rn "new Function(" --include="*.js" --include="*.ts"` | 严重 | 动态函数 → 代码注入 |
+| 21.1.3 | setTimeout/setInterval 字符串 | `grep -rn "setTimeout\s*\(|setInterval\s*\(" --include="*.js" \| grep -v "function"` | 高 | 字符串参数 → eval |
+
+### 21.2 原型污染
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 21.2.1 | 对象合并 | `grep -rn "\.merge\|\.extend\|Object\.assign" --include="*.js" --include="*.ts"` | 高 | 深度合并用户输入 → 原型污染 |
+| 21.2.2 | __proto__ 操作 | `grep -rn "__proto__\|constructor\.prototype" --include="*.js" --include="*.ts"` | 严重 | 直接修改原型 → 原型污染 |
+| 21.2.3 | lodash 版本 | `grep -rn "lodash" --include="package.json"` | 高 | < 4.17.21 → 原型污染漏洞 |
+
+---
+
+## 22. 前端敏感信息泄露检查
+
+### 22.1 硬编码敏感信息
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 22.1.1 | API Key 硬编码 | `grep -rn "api[_-]?key\|apikey" --include="*.js" --include="*.ts" \| grep -E "=.*['\"]"` | 严重 | 硬编码 → 泄露不可控 |
+| 22.1.2 | Secret 硬编码 | `grep -rn "secret\|private[_-]?key" --include="*.js" --include="*.ts" \| grep -E "=.*['\"]"` | 严重 | 硬编码 → 泄露不可控 |
+| 22.1.3 | 密码硬编码 | `grep -rn "password\|passwd" --include="*.js" --include="*.ts" \| grep -E "=.*['\"]"` | 严重 | 硬编码密码 → 泄露 |
+| 22.1.4 | .env 文件检查 | `grep -rn "API_KEY\|SECRET\|PASSWORD" --include="*.env" --include=".env.*"` | 高 | 敏感信息入配置 → 泄露 |
+
+### 22.2 存储安全
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 22.2.1 | localStorage 敏感信息 | `grep -rn "localStorage\.setItem" --include="*.js" --include="*.ts" \| grep -i "token\|password"` | 高 | XSS 可窃取 |
+| 22.2.2 | sessionStorage 敏感信息 | `grep -rn "sessionStorage\.setItem" --include="*.js" --include="*.ts" \| grep -i "password"` | 中 | XSS 可窃取 |
+| 22.2.3 | console.log 敏感信息 | `grep -rn "console\.log" --include="*.js" --include="*.ts" \| grep -i "password\|token\|secret"` | 中 | 控制台泄露 |
+
+---
+
+## 23. 前端配置安全检查
+
+### 23.1 CORS 配置
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 23.1.1 | Access-Control-Allow-Origin | `grep -rn "Access-Control-Allow-Origin" --include="*.js" --include="*.json" --include="*.yaml"` | 高 | `*` → 任意域访问 |
+| 23.1.2 | Allow-Credentials + Origin:* | `grep -rn "Access-Control-Allow-Credentials.*true" --include="*.js" --include="*.json"` | 严重 | Cookie 泄露 |
+| 23.1.3 | CORS 白名单 | 检查是否有域名白名单验证 | 高 | 无白名单 → 任意域 |
+
+### 23.2 CSP 配置
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 23.2.1 | CSP 配置存在 | `grep -rn "Content-Security-Policy" --include="*.html" --include="*.js"` | 中 | 无 CSP → XSS 无防护层 |
+| 23.2.2 | unsafe-inline | `grep -rn "unsafe-inline" --include="*.html" --include="*.js"` | 高 | 允许内联脚本 → XSS 绕过 |
+| 23.2.3 | unsafe-eval | `grep -rn "unsafe-eval" --include="*.html" --include="*.js"` | 高 | 允许 eval → 代码注入 |
+
+### 23.3 开发配置
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 23.3.1 | 调试模式 | `grep -rn "debug.*true\|NODE_ENV.*development" --include="*.js" --include="*.env"` | 高 | 生产开启调试 → 信息泄露 |
+| 23.3.2 | Source Map | `grep -rn "sourcemap.*true\|sourceMap.*true" --include="*.js" --include="*.json"` | 中 | 源码泄露 |
+| 23.3.3 | 错误详情暴露 | 检查前端错误处理 | 中 | 详细错误返回 → 信息泄露 |
+
+---
+
+## 24. 前端开放重定向检查
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 24.1 | window.location 赋值 | `grep -rn "window\.location\s*=" --include="*.js" --include="*.ts"` | 高 | 用户可控 → 开放重定向 |
+| 24.2 | history.push 用户输入 | `grep -rn "history\.push\|router\.push" --include="*.js" --include="*.ts" \| grep -i "props\|query"` | 高 | URL 参数控制 → 重定向 |
+| 24.3 | URL 白名单 | 检查是否有跳转白名单 | 高 | 无白名单 → 任意跳转 |
+| 24.4 | redirect 参数 | `grep -rn "redirect\|next\|returnUrl" --include="*.js" --include="*.ts"` | 高 | URL 参数直接跳转 |
+
+---
+
+## 25. 前端依赖安全检查
+
+| # | 检查项 | 扫描命令/方法 | 风险 | 验证要点 |
+|---|--------|---------------|------|----------|
+| 25.1 | lodash 版本 | `grep -rn "lodash" --include="package.json"` | 高 | < 4.17.21 → 原型污染 |
+| 25.2 | axios 版本 | `grep -rn "axios" --include="package.json"` | 中 | < 0.21.1 → SSRF |
+| 25.3 | react 版本 | `grep -rn "react" --include="package.json"` | 中 | < 16.14.0 → XSS |
+| 25.4 | vue 版本 | `grep -rn "vue" --include="package.json"` | 中 | < 2.6.14 → XSS |
+| 25.5 | jquery 版本 | `grep -rn "jquery" --include="package.json"` | 高 | < 3.6.0 → XSS |
+| 25.6 | npm audit | `npm audit --json` | 高 | 检查所有依赖漏洞 |
+
+**依赖漏洞检查命令**:
+```bash
+# 使用 npm audit
+npm audit
+
+# 使用 snyk
+snyk test
+
+# 使用 yarn audit
+yarn audit
+```
+
+---
+
+## 26. 前端安全检查汇总
+
+| 类别 | 检查项数量 | 严重 | 高 | 中 |
+|------|------------|------|----|----|
+| XSS 安全 | 12 | 8 | 4 | 0 |
+| 代码注入 | 5 | 3 | 2 | 0 |
+| 敏感信息泄露 | 7 | 3 | 3 | 1 |
+| 配置安全 | 9 | 1 | 5 | 3 |
+| 开放重定向 | 4 | 0 | 4 | 0 |
+| 依赖安全 | 6 | 0 | 3 | 3 |
+| **总计** | **43** | **15** | **21** | **7** |
+
+---
+
+## 附录 D: 前端安全测试 Payload
+
+### XSS 测试 Payload
+```
+<script>alert('XSS')</script>
+<img src=x onerror=alert('XSS')>
+<svg onload=alert('XSS')>
+javascript:alert('XSS')
+"><script>alert('XSS')</script>
+'><script>alert('XSS')</script>
+```
+
+### 原型污染测试 Payload
+```json
+{"__proto__": {"admin": true}}
+{"constructor": {"prototype": {"admin": true}}}
+```
+
+### 开放重定向测试 Payload
+```
+//evil.com
+https://evil.com
+javascript:alert(1)
+data:text/html,<script>alert(1)</script>
+```

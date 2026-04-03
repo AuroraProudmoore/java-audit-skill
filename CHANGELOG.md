@@ -5,6 +5,181 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-04-03
+
+### Changed / 架构重构
+
+#### 脚本拆分
+
+**重大变更：将 Java 和前端审计逻辑拆分成独立脚本**
+
+| 变更 | 说明 |
+|------|------|
+| `scripts/audit.py` | 重构为入口路由脚本，仅保留语言检测和路由分发功能 |
+| `scripts/java_audit.py` | 保持原有 Java 审计逻辑，添加 `run_java_audit()` 入口函数 |
+| `scripts/frontend_audit.py` | **新建**前端专用审计脚本，包含前端 Tier 分类和危险模式 |
+
+#### 架构优势
+
+- **职责清晰**：Java 和前端审计逻辑完全分离
+- **易于维护**：修改一种语言的审计逻辑不影响另一种语言
+- **独立调用**：可以单独调用 `java_audit.py` 或 `frontend_audit.py`
+- **统一入口**：`audit.py` 自动检测语言类型并路由到对应脚本
+
+#### 调用流程
+
+```
+audit.py (语言检测 + 路由分发)
+    ├── java → java_audit.py
+    ├── react/vue/javascript → frontend_audit.py
+    └── mixed → 两者都执行
+```
+
+### Added / 新增
+
+#### frontend_audit.py 功能
+
+- **前端 Tier 分类**：页面组件(T1) → 业务组件(T2) → 样式文件(T3)
+- **前端危险模式**：XSS、代码注入、原型污染、敏感信息泄露
+- **依赖安全检查**：检查 package.json 中的危险依赖版本
+
+### Fixed / 修复
+
+- 修复 `java_audit.py` 缺少 `run_java_audit()` 入口函数的问题
+- 移除 `audit.py` 中混合的 Java 和前端审计逻辑
+
+---
+
+## [1.9.2] - 2026-04-03
+
+### Added / 新增
+
+#### 前端审计支持
+
+- **语言检测功能**: 新增 `detect_project_language()` 函数，支持自动检测项目语言类型
+  - 支持检测：Java/Kotlin、JavaScript/TypeScript、React、Vue、混合项目
+  - 根据文件扩展名和项目结构判断语言类型
+  - 推荐相应的 Semgrep 规则集
+
+- **前端 Semgrep 规则**: 新增 4 个前端安全规则文件
+  - `js-security.yaml`: JavaScript/TypeScript 通用安全规则（XSS、原型污染、代码注入、敏感信息泄露）
+  - `react-security.yaml`: React 框架安全规则（dangerouslySetInnerHTML、href 注入、SSR XSS）
+  - `vue-security.yaml`: Vue 框架安全规则（v-html XSS、模板注入、不安全渲染）
+  - `frontend-config.yaml`: 前端配置安全规则（CORS、CSP、敏感信息硬编码、依赖安全）
+
+#### 前端漏洞判断条件
+
+- **vulnerability-conditions.md**: 新增前端漏洞判断条件
+  - DOM-based XSS 判断流程
+  - React dangerouslySetInnerHTML XSS 判断流程
+  - Vue v-html XSS 判断流程
+  - 前端代码注入判断流程
+  - 前端开放重定向判断流程
+  - 前端敏感信息泄露判断流程
+  - 前端配置安全判断流程
+
+#### 前端安全检查项
+
+- **security-checklist.md**: 新增前端安全检查项
+  - 前端 XSS 安全检查（12 项）
+  - 前端代码注入检查（5 项）
+  - 前端敏感信息泄露检查（7 项）
+  - 前端配置安全检查（9 项）
+  - 前端开放重定向检查（4 项）
+  - 前端依赖安全检查（6 项）
+
+### Changed / 变更
+
+- **SKILL.md**: 更新支持语言类型说明
+  - 新增支持语言类型表格
+  - 新增语言检测流程说明
+  - 版本号更新至 v1.9.2
+
+- **README.md**: 版本号更新至 v1.9.2
+
+---
+
+## [1.9.1] - 2026-04-03
+
+### Fixed / 修复
+
+#### 脚本 Bug 修复
+
+- **java_audit.py Tier 分类遗漏框架**: 扩展 T1 模式列表，新增支持：
+  - Jersey/JAX-RS: `@Path`, `@Provider`
+  - Struts 2: `extends ActionSupport`, `implements Action`, `@Action`
+  - Play Framework: `extends Controller`, `extends Action`
+  - Jakarta EE: `jakarta.servlet.*` 命名空间
+  - Vert.x: `@Route`, `extends AbstractVerticle`
+  - Dubbo: `@Service(`, `@DubboService`
+  - gRPC: `extends AbstractService`
+
+- **java_audit.py 覆盖率正则误匹配**: 修复正则表达式匹配类名和注释问题
+  - 优先匹配 markdown 表格格式
+  - 要求路径包含目录分隔符，避免匹配纯类名
+  - 新增从漏洞报告代码位置提取的方法
+
+- **java_audit.py 场景识别误报**: 使用单词边界匹配避免误报
+  - 避免匹配变量名中的关键词（如 `paymentService`）
+  - 只在路径和方法名中匹配，排除注释
+
+- **java_audit.py Layer 1 输出**: 移除无意义的 P3 文件生成
+  - 只生成有内容的报告（P0/P1/P2）
+
+- **quality-checker.ps1 正则转义**: 修复 Linux 路径支持
+  - 支持 Windows 盘符路径和 Linux 绝对路径
+  - 新增相对路径格式警告
+
+#### Semgrep 规则更新
+
+- **Jakarta EE 支持**: 新增 Spring Boot 3.x 支持
+  - `jakarta.servlet.*` 命名空间规则
+  - `jakarta.websocket.*` WebSocket 端点规则
+
+- **Spring Security 6.x 规则**: 新增新语法检测
+  - `requestMatchers()` 规则
+  - `authorizeHttpRequests()` 规则
+  - `securityMatcher()` 规则
+  - 已弃用的 `antMatchers` 警告
+
+- **Fastjson 2.x 规则**: 新增检测
+  - `JSONReader.Feature.SupportAutoType` 检测
+  - Fastjson 2.x 受影响版本检测
+
+- **Kotlin 协程安全规则**: 新增检测
+  - `GlobalScope.launch/async` 内存泄漏风险
+  - `runBlocking` 阻塞风险
+  - `Dispatchers.IO` 使用建议
+
+#### 文档统一
+
+- **SKILL.md**: 更新内容
+  - Layer 2.5 触发条件检查清单
+  - 覆盖率门禁阈值分层描述（T1/T2/T3）
+  - 版本号更新至 v1.9.1
+
+- **REPORT-RULES.md**: 统一覆盖率阈值描述
+  - 分层门禁判断逻辑
+  - T1 必须 100% 的硬性要求
+
+- **report-template.md**: 分析深度要求更新
+  - L4 级别（1500字以上）标准
+  - 分析深度分级表
+
+### Changed / 变更
+
+- **覆盖率门禁阈值**: 明确分层要求
+  - T1 (Controller/Filter): 必须 100%，无例外
+  - T2 (Service/DAO): 中型 95%，大型 90%
+  - T3 (Entity/VO): 中型 85%，大型 80%
+
+- **Layer 2.5 触发条件**: 新增检查清单
+  - API 路径关键词检查
+  - 方法名关键词检查
+  - 业务场景检查
+
+---
+
 ## [1.9.0] - 2026-04-03
 
 ### Changed / 变更

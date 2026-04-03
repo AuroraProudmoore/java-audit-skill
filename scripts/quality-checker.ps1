@@ -357,12 +357,19 @@ function Test-Phase5 {
     
     # 3. 检查代码位置格式（必须是完整绝对路径）
     # 正确格式: E:\path\to\File.java:123 或 /path/to/File.java:123
-    # 错误格式: File.java:123（无路径）
-    $badPaths = [regex]::Matches($content, "代码位置[：:\s]*\n\s*[^/\nA-Z][^:\n]*\.java:\d+")
+    # 错误格式: File.java:123（无路径）或 ./path/File.java:123（相对路径）
+    # 修复：支持 Windows 盘符路径和 Linux 绝对路径
+    $badPaths = [regex]::Matches($content, "代码位置[：:\s]*\n\s*[^/\nA-Z\\][^:\n]*\.java:\d+")
     if ($badPaths.Count -gt 0) {
-        Add-Error "存在 $($badPaths.Count) 处非完整路径的代码位置"
+        Add-Error "存在 $($badPaths.Count) 处非完整路径的代码位置（应为绝对路径如 E:\path\File.java:123 或 /path/File.java:123）"
     } else {
         Write-Success "代码位置格式正确（完整绝对路径）"
+    }
+    
+    # 3.1 检查相对路径格式（./ 或 ..\）
+    $relativePaths = [regex]::Matches($content, "代码位置[：:\s]*\n\s*[\.][\\/]")
+    if ($relativePaths.Count -gt 0) {
+        Add-Warning "存在 $($relativePaths.Count) 处相对路径格式（建议使用绝对路径）"
     }
     
     # 4. 检查标题格式（禁止包含严重程度标签）

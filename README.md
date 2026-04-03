@@ -1,12 +1,13 @@
-# Java Audit Skill
+# Code Audit Skill
 
 <div align="center">
 
-**AI 驱动的 Java/Kotlin 代码安全审计框架**
+**AI 驱动的 Java/前端 代码安全审计框架**
 
-[![Version](https://img.shields.io/badge/Version-1.8.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
+[![Version](https://img.shields.io/badge/Version-1.10.0-blue.svg)](https://github.com/AuroraProudmoore/java-audit-skill/releases)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Java](https://img.shields.io/badge/Java-8%2B-orange.svg)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java/Kotlin-8%2B-orange.svg)](https://www.oracle.com/java/)
+[![JavaScript](https://img.shields.io/badge/JS/TS/React/Vue-Supported-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![AI](https://img.shields.io/badge/AI-LLM%20Driven-purple.svg)](https://en.wikipedia.org/wiki/Large_language_model)
 [![Security](https://img.shields.io/badge/Security-Policy-green.svg)](SECURITY.md)
 
@@ -23,11 +24,54 @@
 
 ### 📖 概述
 
-**Java Audit Skill** 是一个 AI 驱动的 Java/Kotlin 代码安全审计框架，将资深安全审计员的方法论编码成 LLM 可执行的工作流协议。
+**Code Audit Skill** 是一个 AI 驱动的多语言代码安全审计框架，将资深安全审计员的方法论编码成 LLM 可执行的工作流协议。
+
+**支持语言**：
+
+| 语言类型 | 框架支持 | 主要检查内容 |
+|----------|----------|--------------|
+| **Java/Kotlin** | Spring、Spring Boot、Struts、Jersey | 反序列化、SQL注入、命令执行、SSRF |
+| **JavaScript/TypeScript** | 原生、Node.js | XSS、代码注入、原型污染 |
+| **React** | React 16+、Next.js | dangerouslySetInnerHTML、href注入 |
+| **Vue** | Vue 2/3、Nuxt.js | v-html XSS、模板注入 |
 
 **核心价值**：解决裸跑 LLM 做代码审计的三大痛点——**覆盖率低、幻觉高、优先级混乱**。
 
 > **LLM 有能力，缺纪律。** 本框架不教 LLM "什么是 SQL 注入"，而是给它装上资深审计员的工作骨架——定义工作流、分配资源、设置护栏、标准化输出。
+
+---
+
+## 📁 脚本架构
+
+**v1.10.0 架构重构：脚本按语言类型拆分，职责清晰**
+
+```
+scripts/
+├── audit.py              # 通用入口（语言检测 + 路由分发）
+├── java_audit.py         # Java/Kotlin 后端审计
+└── frontend_audit.py     # JavaScript/React/Vue 前端审计
+```
+
+### 脚本职责
+
+| 脚本 | 职责 | 包含功能 |
+|------|------|----------|
+| **audit.py** | 通用入口 | 语言检测、路由分发、统一参数解析 |
+| **java_audit.py** | Java 审计 | Java Tier 分类、Java 危险模式、EALOC 计算、覆盖率检查 |
+| **frontend_audit.py** | 前端审计 | 前端 Tier 分类、前端危险模式、依赖检查、配置安全 |
+
+### 使用方法
+
+```bash
+# 自动检测语言并执行审计
+python scripts/audit.py /path/to/project --scan --tier
+
+# Java 项目审计（直接调用）
+python scripts/java_audit.py /path/to/java-project --scan --tier
+
+# 前端项目审计（直接调用）
+python scripts/frontend_audit.py /path/to/frontend-project --language react --scan --tier
+```
 
 ---
 
@@ -467,7 +511,9 @@ diff 对比
 
 ## 🔍 覆盖的漏洞类型
 
-### P0 级（严重）
+### Java/Kotlin 后端漏洞
+
+#### P0 级（严重）
 
 | 类型 | 具体漏洞 |
 |------|---------|
@@ -477,7 +523,7 @@ diff 对比
 | **JNDI 注入** | InitialContext.lookup |
 | **命令执行** | Runtime.exec、ProcessBuilder |
 
-### P1 级（高危）
+#### P1 级（高危）
 
 | 类型 | 具体漏洞 |
 |------|---------|
@@ -486,7 +532,7 @@ diff 对比
 | **文件操作** | 路径穿越、任意文件上传/读取 |
 | **XXE** | DocumentBuilder、SAXParser |
 
-### P2 级（中危）
+#### P2 级（中危）
 
 | 类型 | 具体漏洞 |
 |------|---------|
@@ -494,7 +540,33 @@ diff 对比
 | **加密安全** | 弱哈希算法、硬编码密钥 |
 | **信息泄露** | 敏感信息日志、错误信息暴露 |
 
+### 前端漏洞（JavaScript/React/Vue）
+
+#### P0 级（严重）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **XSS** | innerHTML、dangerouslySetInnerHTML、v-html |
+| **代码注入** | eval()、new Function()、setTimeout(字符串) |
+
+#### P1 级（高危）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **原型污染** | Object.assign、_.merge、_.extend |
+| **敏感信息泄露** | localStorage 存储 token、硬编码密钥 |
+| **开放重定向** | 未验证的 redirect 参数 |
+
+#### P2 级（中危）
+
+| 类型 | 具体漏洞 |
+|------|---------|
+| **配置安全** | CORS 配置不当、CSP 缺失 |
+| **不安全随机数** | Math.random() 用于安全场景 |
+
 ### 依赖安全检查
+
+#### Java 依赖（mvnrepository.com 联网核实）
 
 | 依赖 | 危险版本 | 安全版本 |
 |------|----------|----------|
@@ -503,15 +575,32 @@ diff 对比
 | Shiro | < 1.13.0 | ≥ 1.13.0 |
 | Netty | < 4.1.129 | ≥ 4.1.129 |
 
+#### 前端依赖（npm audit 实时检查）
+
+| 依赖 | 检查方式 |
+|------|----------|
+| 所有依赖 | npm audit / yarn audit |
+| 漏洞数据库 | npm 官方漏洞数据库 |
+
 ---
 
 ## 🎯 适用场景
+
+### Java/Kotlin 后端审计
 
 - ✅ Java/Kotlin 项目的 **0day 漏洞挖掘**
 - ✅ 企业级代码库的**安全审计**
 - ✅ **CI/CD 集成**的前期漏洞发现
 - ✅ 甲方安全建设（代码审计标准化）
 - ✅ 安全培训（审计方法论学习）
+
+### 前端审计（JavaScript/React/Vue）
+
+- ✅ 前端项目的 **XSS 漏洞挖掘**
+- ✅ 单页应用（SPA）**安全评估**
+- ✅ 前后端分离项目的**前端安全审计**
+- ✅ 前端依赖安全检查
+- ✅ 前端配置安全审计
 
 ---
 
@@ -553,7 +642,16 @@ diff 对比
 
 ### Overview
 
-**Java Audit Skill** is an AI-powered Java/Kotlin code security audit framework that encodes senior security auditors' methodologies into LLM-executable workflow protocols.
+**Code Audit Skill** is an AI-powered multi-language code security audit framework that encodes senior security auditors' methodologies into LLM-executable workflow protocols.
+
+**Supported Languages**:
+
+| Language | Frameworks | Main Checks |
+|----------|------------|-------------|
+| **Java/Kotlin** | Spring, Spring Boot, Struts | Deserialization, SQLi, RCE, SSRF |
+| **JavaScript/TypeScript** | Native, Node.js | XSS, Code Injection, Prototype Pollution |
+| **React** | React 16+, Next.js | dangerouslySetInnerHTML, href Injection |
+| **Vue** | Vue 2/3, Nuxt.js | v-html XSS, Template Injection |
 
 **Core Value**: Solves the three main pain points of using LLMs for code auditing—**low coverage, high hallucination, and chaotic prioritization**.
 
@@ -655,22 +753,42 @@ node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "netty 4.1.10
 
 ## 🔍 Vulnerability Coverage
 
-### P0 (Critical)
+### Java/Kotlin Backend
+
+#### P0 (Critical)
 
 - Deserialization: Fastjson, Jackson, Hessian
 - SSTI: Velocity, FreeMarker, Thymeleaf
 - RCE: Runtime.exec, ProcessBuilder
 
-### P1 (High)
+#### P1 (High)
 
 - SQL Injection: MyBatis `${}`, JDBC concatenation
 - SSRF: URL, HttpClient, RestTemplate
 - File Operations: Path traversal, arbitrary upload
 
-### P2 (Medium)
+#### P2 (Medium)
 
 - Authentication: Access bypass, auth bypass
 - Cryptography: Weak hashing, hardcoded keys
+
+### Frontend (JavaScript/React/Vue)
+
+#### P0 (Critical)
+
+- XSS: innerHTML, dangerouslySetInnerHTML, v-html
+- Code Injection: eval(), new Function()
+
+#### P1 (High)
+
+- Prototype Pollution: Object.assign, _.merge
+- Sensitive Data: localStorage token, hardcoded keys
+- Open Redirect: Unvalidated redirect parameter
+
+#### P2 (Medium)
+
+- Configuration: CORS misconfiguration, missing CSP
+- Insecure Random: Math.random() for security
 
 ---
 
@@ -701,6 +819,6 @@ This project is licensed under the [MIT License](LICENSE).
 
 **Made with ❤️ by Security Researchers**
 
-[⬆ Back to Top](#java-audit-skill)
+[⬆ Back to Top](#code-audit-skill)
 
 </div>

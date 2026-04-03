@@ -1,17 +1,77 @@
 ---
 name: java-audit-skill
 description: |
-  AI驱动的Java代码安全审计技能，实现系统化、高覆盖率的漏洞挖掘。使用场景：
+  AI驱动的Java/前端代码安全审计技能，实现系统化、高覆盖率的漏洞挖掘。使用场景：
   (1) 审计Java/Kotlin项目寻找安全漏洞（0day挖掘、代码审计、安全评估）
-  (2) 企业级代码库的安全审计（支持大型项目）
-  (3) 需要高质量、低幻觉率的安全审计报告
-  (4) CI/CD集成的前期漏洞发现
-  触发关键词：Java审计、代码审计、安全审计、漏洞挖掘、0day、安全评估、Java security audit、code review for security
+  (2) 审计前端项目（JavaScript/TypeScript/React/Vue）寻找安全漏洞
+  (3) 企业级代码库的安全审计（支持大型项目）
+  (4) 需要高质量、低幻觉率的安全审计报告
+  (5) CI/CD集成的前期漏洞发现
+  触发关键词：Java审计、代码审计、安全审计、漏洞挖掘、0day、安全评估、前端审计、React审计、Vue审计、Java security audit、code review for security
 ---
 
-# AI+Java 代码审计 Skill
+# AI+Java/前端 代码审计 Skill
 
 本 Skill 将资深审计员的工作方法和质量标准编码成 LLM 可执行的协议，解决裸跑 LLM 覆盖率低、幻觉高、优先级混乱等核心痛点。
+
+## 支持的语言类型
+
+| 语言类型 | 框架支持 | 主要检查内容 |
+|----------|----------|--------------|
+| **Java/Kotlin** | Spring、Spring Boot、Struts、Jersey、Dubbo、gRPC | 反序列化、SQL注入、命令执行、认证绕过、SSRF、文件操作 |
+| **JavaScript/TypeScript** | 原生、Node.js | XSS、代码注入、原型污染、敏感信息泄露 |
+| **React** | React 16+、Next.js | dangerouslySetInnerHTML、href注入、SSR XSS |
+| **Vue** | Vue 2/3、Nuxt.js | v-html XSS、模板注入、不安全渲染 |
+| **混合项目** | 前后端分离 | 后端API安全 + 前端XSS/配置安全 |
+
+## 脚本架构
+
+**⚠️ 重要：脚本已按语言类型拆分，职责清晰**
+
+```
+scripts/
+├── audit.py              # 通用入口（语言检测 + 路由分发）
+├── java_audit.py         # Java/Kotlin 后端审计
+└── frontend_audit.py     # JavaScript/React/Vue 前端审计
+```
+
+### 脚本职责
+
+| 脚本 | 职责 | 包含功能 |
+|------|------|----------|
+| **audit.py** | 通用入口 | 语言检测、路由分发、统一参数解析 |
+| **java_audit.py** | Java 审计 | Java Tier 分类、Java 危险模式、EALOC 计算、覆盖率检查 |
+| **frontend_audit.py** | 前端审计 | 前端 Tier 分类、前端危险模式、依赖检查、配置安全 |
+
+### 调用流程
+
+```
+用户执行: python audit.py /path/to/project --scan --tier
+                    ↓
+              [audit.py]
+                    ↓
+         语言检测: detect_project_language()
+                    ↓
+    ┌───────────────┼───────────────┐
+    │               │               │
+  java          react/vue      mixed
+    │               │               │
+    ↓               ↓               ↓
+[java_audit.py] [frontend_audit.py] [两者都执行]
+```
+
+### 使用方法
+
+```bash
+# 自动检测语言并执行审计
+python scripts/audit.py /path/to/project --scan --tier
+
+# Java 项目审计（直接调用）
+python scripts/java_audit.py /path/to/java-project --scan --tier
+
+# 前端项目审计（直接调用）
+python scripts/frontend_audit.py /path/to/frontend-project --language react --scan --tier
+```
 
 ## 核心理念
 
@@ -39,6 +99,43 @@ Phase 4 放在最后的原因：规则沉淀基于**最终确认的漏洞**（Ph
 ## Phase 0: 代码库度量
 
 **目标**: 统计项目规模，计算审计工作量，为 Agent 分配提供依据。
+
+### 语言检测（新增）
+
+**⚠️ 在开始审计前，必须先检测项目语言类型**：
+
+```bash
+# 执行语言检测
+python scripts/java_audit.py /path/to/project --detect-lang
+```
+
+**检测结果决定审计流程**：
+
+| 语言类型 | 审计流程 | Semgrep 规则集 |
+|----------|----------|----------------|
+| **java** | Java 后端审计流程 | java-rce.yaml, java-config.yaml, java-sqli.yaml |
+| **javascript** | 前端通用审计流程 | js-security.yaml, frontend-config.yaml |
+| **react** | React 审计流程 | react-security.yaml, js-security.yaml |
+| **vue** | Vue 审计流程 | vue-security.yaml, js-security.yaml |
+| **mixed** | 前后端分离审计流程 | Java 规则 + 前端规则 |
+
+**语言检测逻辑**：
+
+```
+1. 统计文件扩展名：
+   - .java/.kt → Java/Kotlin
+   - .js/.ts/.jsx/.tsx/.vue → 前端
+
+2. 检测框架特征：
+   - pom.xml/build.gradle → Java 项目
+   - package.json → 前端项目
+   - react/vue 依赖 → React/Vue 项目
+
+3. 判断项目类型：
+   - 纯 Java/Kotlin → java
+   - 纯前端 → javascript/react/vue
+   - 前后端分离 → mixed
+```
 
 ### 执行脚本
 
@@ -734,6 +831,22 @@ Step 3: 执行 Layer 2.5（仅对逻辑漏洞）
 | 资源分配 | 涉及库存、名额 | `createOrder()`, `book()` |
 | 数据访问 | 涉及敏感数据查询 | `getUserInfo()`, `getOrderDetail()` |
 
+**⚠️ Layer 2.5 触发条件检查清单**：
+
+在执行 Layer 2 之前，必须先检查是否需要触发 Layer 2.5：
+
+```markdown
+□ API 路径包含 pay/payment/refund/transfer/withdraw？
+□ 方法名包含 updateStatus/approve/reject/confirm/cancel？
+□ 涉及金额、价格、库存、数量字段？
+□ 涉及状态机流转（订单状态、审批状态）？
+□ 涉及用户间数据隔离（水平越权风险）？
+□ 涉及特权操作（管理员功能、系统配置）？
+
+→ 任一为是 → 必须执行 Layer 2.5
+→ 全部为否 → 可跳过 Layer 2.5
+```
+
 **注意**：Layer 2.5 专门用于逻辑漏洞分析，普通漏洞（SQL注入、命令注入等）用 Layer 2 双轨审计即可。
 
 对于 Semgrep 规则无法覆盖的漏洞类型，需要通过代码分析进行判断。
@@ -935,13 +1048,28 @@ python scripts/java_audit.py /path/to/project --coverage --reviewed-file finding
 
 ### 门禁阈值
 
-| 项目规模 | EALOC | 总体覆盖率 | T1 覆盖率 | T2 覆盖率 | T3 覆盖率 |
-|----------|-------|------------|-----------|-----------|-----------|
-| 小型项目 | < 15,000 | 100% | **100%** | 95% | 90% |
-| 中型项目 | 15,000 - 50,000 | 95% | **100%** | 95% | 85% |
-| 大型项目 | > 50,000 | 90% | **100%** | 90% | 80% |
+**⚠️ 核心原则**：T1 文件（Controller/Filter）必须 100% 覆盖，无例外。
 
-**T1 文件（Controller/Filter）必须 100% 覆盖，无例外。**
+| 项目规模 | EALOC | T1 覆盖率 | T2 覆盖率 | T3 覆盖率 | 总体覆盖率 |
+|----------|-------|-----------|-----------|-----------|------------|
+| 小型项目 | < 15,000 | **100%** | 95% | 90% | **100%** |
+| 中型项目 | 15,000 - 50,000 | **100%** | 95% | 85% | **95%** |
+| 大型项目 | > 50,000 | **100%** | 90% | 80% | **90%** |
+
+**门禁判断逻辑**：
+
+```
+门禁通过条件（必须全部满足）：
+1. T1 覆盖率 == 100%（硬性要求，无例外）
+2. T2 覆盖率 >= 阈值（中型 95%，大型 90%）
+3. T3 覆盖率 >= 阈值（中型 85%，大型 80%）
+4. 总体覆盖率 >= 阈值（小型 100%，中型 95%，大型 90%）
+```
+
+**说明**：
+- **T1（Controller/Filter）**：入口点文件，安全风险最高，必须全部审计
+- **T2（Service/DAO）**：业务逻辑层，覆盖率要求较高
+- **T3（Entity/VO）**：数据模型层，覆盖率要求相对较低
 
 ### 模块覆盖矩阵
 
@@ -1775,6 +1903,125 @@ Layer 3: LSP/Joern 语义级验证
 
 ---
 
+## ⚠️ 输入长度限制应对策略（重要）
+
+**问题**: LLM 存在输入长度限制（约 200KB），一次性加载过多内容会导致 `Range of input length should be [1, 202745]` 错误。
+
+### 分阶段执行策略
+
+**⚠️ 必须遵循以下分阶段执行策略，避免输入长度超限**：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    分阶段执行策略                              │
+└─────────────────────────────────────────────────────────────┘
+
+Step 1: 脚本执行（不直接读取文件）
+  ├── python audit.py --detect-lang     # 仅获取语言检测结果
+  ├── python java_audit.py --scan --tier # 仅获取扫描摘要
+  └── 输出内容是精简的摘要信息（< 10KB）
+
+Step 2: 针对性搜索（不全文件读取）
+  ├── search_content "password|secret"  # 只返回匹配行
+  ├── search_content "Runtime.getRuntime"
+  └── 输出内容是匹配的关键行（< 5KB）
+
+Step 3: 分段读取关键文件（限制行数）
+  ├── read_file offset=50 limit=30      # 只读取 30 行
+  ├── read_file offset=100 limit=50     # 分段读取
+  └── 每次读取限制在 50-100 行以内
+
+Step 4: 分段生成报告（分段写入）
+  ├── write_to_file 先写框架
+  ├── replace_in_file 逐个添加漏洞
+  └── 避免一次性写入大量内容
+```
+
+### 内容量限制规则
+
+| 操作类型 | 限制 | 说明 |
+|----------|------|------|
+| **脚本执行输出** | < 10KB | 脚本输出是精简摘要，不会超限 |
+| **search_content 结果** | < 5KB | 只返回匹配行，使用 headLimit 限制 |
+| **read_file 单次读取** | < 100 行 | 使用 offset 和 limit 参数分段读取 |
+| **单次响应总内容** | < 50KB | 控制单次响应中的总内容量 |
+
+### 大型项目处理策略（EALOC > 10000）
+
+**⚠️ 当 EALOC > 10000 时，必须采用以下策略**：
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   大型项目审计流程                             │
+└─────────────────────────────────────────────────────────────┘
+
+Phase 0: 仅执行脚本
+  ├── python audit.py --detect-lang
+  ├── python java_audit.py --scan --tier
+  └── 不直接读取任何源文件
+
+Phase 1: 根据扫描结果确定重点
+  ├── 读取 p0-critical.md、p1-high.md（脚本生成的报告）
+  ├── 确定需要深入分析的文件列表（< 10 个）
+  └── 不全量读取所有文件
+
+Phase 2: 针对性分析关键文件
+  ├── 只读取 P0/P1 级危险模式涉及的文件
+  ├── 分段读取（每次 < 100 行）
+  └── 使用 search_content 搜索关键模式
+
+Phase 3: 分段生成报告
+  ├── 先写入报告框架
+  ├── 逐个添加漏洞详情
+  └── 每次添加 1-2 个漏洞
+```
+
+### 禁止的操作
+
+| 禁止操作 | 原因 | 正确做法 |
+|----------|------|----------|
+| ❌ 一次性读取整个文件 | 可能超过 200KB | ✅ 使用 offset/limit 分段读取 |
+| ❌ 一次性读取多个大文件 | 累积超限 | ✅ 逐个读取，控制总量 |
+| ❌ 不使用脚本直接读取源文件 | 内容量不可控 | ✅ 先执行脚本获取摘要 |
+| ❌ 在单次响应中处理过多漏洞 | 报告内容超限 | ✅ 分多次响应处理 |
+
+### 正确的审计流程示例
+
+```markdown
+# 正确流程（避免超限）
+
+## Step 1: 执行脚本获取摘要
+→ python audit.py /path/to/project --detect-lang
+→ 输出: 语言类型、文件数量（< 2KB）
+
+## Step 2: 执行扫描获取危险模式
+→ python java_audit.py /path/to/project --scan --tier
+→ 输出: P0/P1/P2 发现数量、文件列表（< 10KB）
+
+## Step 3: 读取扫描报告确定重点
+→ read_file p0-critical.md（< 5KB）
+→ read_file p1-high.md（< 5KB）
+→ 确定需要深入分析的文件（< 10 个）
+
+## Step 4: 针对性搜索关键模式
+→ search_content "password|secret" --headLimit 20
+→ search_content "Runtime.getRuntime" --headLimit 10
+→ 输出: 匹配的关键行（< 5KB）
+
+## Step 5: 分段读取关键文件
+→ read_file Controller.java offset=50 limit=30
+→ read_file Service.java offset=100 limit=50
+→ 每次读取 < 100 行
+
+## Step 6: 分段生成报告
+→ write_to_file findings-raw.md（先写框架）
+→ replace_in_file（添加漏洞 1）
+→ replace_in_file（添加漏洞 2）
+→ 分多次添加，避免一次性写入过多
+```
+
+---
+
 ## 小型项目简化流程
 
 **适用条件**：EALOC < 15,000（小型项目）
@@ -1848,13 +2095,16 @@ foreach ($file in $files) {
 
 ---
 
-**文档版本**: v1.8.0  
-**最后更新**: 2026-04-01
+**文档版本**: v1.9.2  
+**最后更新**: 2026-04-03
 
 ## 版本历史
 
 | 版本 | 日期 | 变更内容 |
 |------|------|----------|
+| v1.9.2 | 2026-04-03 | 新增：前端审计支持（JS/React/Vue）、语言检测功能、前端 Semgrep 规则 |
+| v1.9.1 | 2026-04-03 | 修复：Tier 分类扩展支持多框架、覆盖率正则修复、Jakarta EE 规则、Layer 2.5 触发条件检查清单 |
+| v1.9.0 | 2026-04-02 | 依赖安全检查重构（mvnrepository.com 联网核实）、新增质量校验脚本 |
 | v1.8.0 | 2026-04-01 | 重构报告格式：h1漏洞名称 + 漏洞列表 + 审计进度 + 三段式漏洞详情 |
 | v1.7.0 | 2026-03-31 | 初始版本
 

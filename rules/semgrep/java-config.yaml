@@ -1501,3 +1501,183 @@ rules:
     metadata:
       category: security
       cwe: "CWE-15"
+
+  # ============================================
+  # P1 - Jakarta EE 支持 (Spring Boot 3.x)
+  # ============================================
+  
+  - id: java-config-jakarta-servlet-filter
+    patterns:
+      - pattern-regex: 'jakarta\.servlet\.|implements\s+(jakarta\.)?Filter|extends\s+(jakarta\.)?HttpServlet'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Jakarta EE Servlet/Filter 实现。Jakarta EE 9+ 使用 jakarta.* 命名空间（Spring Boot 3.x）。请确保安全配置正确。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
+
+  - id: java-config-jakarta-websocket
+    patterns:
+      - pattern-regex: 'jakarta\.websocket\.|@ServerEndpoint|@ClientEndpoint'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Jakarta WebSocket 端点。WebSocket 端点可能存在认证绕过或输入验证问题。建议检查握手阶段的认证逻辑。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-287"
+
+  # ============================================
+  # P1 - Spring Security 6.x 新语法规则
+  # ============================================
+  
+  - id: java-config-springsecurity6-requestMatchers-permitAll
+    patterns:
+      - pattern-regex: 'requestMatchers\s*\(\s*"[^"]+"\s*\)\s*\.\s*permitAll|requestMatchers\s*\(\s*AntPathRequestMatcher|requestMatchers\s*\(\s*MvcRequestMatcher'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Spring Security 6.x requestMatchers permitAll 配置。requestMatchers 替代了 antMatchers/mvcMatchers。请确认该路径是否需要公开访问。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-284"
+
+  - id: java-config-springsecurity6-authorizeHttpRequests-anyRequest
+    patterns:
+      - pattern-regex: 'anyRequest\s*\(\s*\)\s*\.\s*(permitAll|anonymous)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Spring Security 6.x anyRequest().permitAll() 或 anyRequest().anonymous()。这会放行所有未匹配的请求，可能导致认证绕过。建议使用 anyRequest().authenticated()。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-287"
+
+  - id: java-config-springsecurity6-securityMatcher
+    patterns:
+      - pattern-regex: 'securityMatcher\s*\(\s*"[^"]+"\s*\)'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Spring Security 6.x securityMatcher 配置。用于 SecurityFilterChain 的请求匹配。请确保匹配规则正确配置。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-287"
+
+  - id: java-config-springsecurity6-deprecated-antMatchers
+    patterns:
+      - pattern-regex: 'antMatchers\s*\(|mvcMatchers\s\('
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到已弃用的 antMatchers/mvcMatchers。Spring Security 6.x 建议使用 requestMatchers() 替代。antMatchers 在 6.1+ 已标记为 deprecated。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-477"
+
+  # ============================================
+  # P1 - Fastjson 2.x 规则
+  # ============================================
+  
+  - id: java-config-fastjson2-autotype-enabled
+    patterns:
+      - pattern-regex: 'JSONReader\.Feature\.SupportAutoType|ParserConfig\.getGlobalInstance\(\)\.setAutoTypeSupport\(true\)|fastjson2.*AutoType'
+    paths:
+      include:
+        - "*.java"
+        - "*.kt"
+    message: "检测到 Fastjson 2.x AutoType 开启。Fastjson 2.x 包名改为 com.alibaba.fastjson2，同样存在反序列化 RCE 风险。建议使用 safeMode。"
+    severity: ERROR
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-502"
+
+  - id: java-config-fastjson2-version-vulnerable
+    patterns:
+      - pattern-regex: 'fastjson2[^>]*<version>\s*2\.0\.([0-9]|[1-3][0-9]|4[0-6])\.'
+    paths:
+      include:
+        - "pom.xml"
+        - "*.gradle"
+    message: "检测到 Fastjson 2.x 受影响版本 (< 2.0.47)。存在反序列化 RCE 漏洞风险。建议升级到 2.0.47+ 或最新版本。"
+    severity: ERROR
+    languages: [yaml]
+    metadata:
+      category: security
+      cwe: "CWE-502"
+
+  # ============================================
+  # P1 - Kotlin 协程安全规则
+  # ============================================
+  
+  - id: java-config-kotlin-coroutine-globalscope
+    patterns:
+      - pattern-regex: 'GlobalScope\.(launch|async)'
+    paths:
+      include:
+        - "*.kt"
+    message: "检测到 GlobalScope 使用。GlobalScope 生命周期与应用相同，可能导致内存泄漏和未控制的并发。建议使用 lifecycleScope、viewModelScope 或自定义 CoroutineScope。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-401"
+
+  - id: java-config-kotlin-coroutine-runBlocking
+    patterns:
+      - pattern-regex: 'runBlocking\s*\{'
+    paths:
+      include:
+        - "*.kt"
+    message: "检测到 runBlocking 使用。runBlocking 会阻塞当前线程，在协程中使用可能导致死锁。建议使用 suspend 函数或 withContext。"
+    severity: WARNING
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-400"
+
+  - id: java-config-kotlin-coroutine-dispatcher-IO
+    patterns:
+      - pattern-regex: 'withContext\(Dispatchers\.IO\)|Dispatchers\.IO'
+    paths:
+      include:
+        - "*.kt"
+    message: "检测到 Dispatchers.IO 使用。IO 调度器适用于阻塞操作，但过度使用可能导致线程池耗尽。建议合理评估并发需求。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-400"
+
+  - id: java-config-kotlin-inject-constructor
+    patterns:
+      - pattern-regex: '@Inject\s+constructor|@Singleton\s+class'
+    paths:
+      include:
+        - "*.kt"
+    message: "检测到 Kotlin 依赖注入。请确保注入的依赖是线程安全的，特别是对于单例组件。"
+    severity: INFO
+    languages: [java]
+    metadata:
+      category: security
+      cwe: "CWE-362"

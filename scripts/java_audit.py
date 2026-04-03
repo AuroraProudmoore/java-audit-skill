@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Java/Kotlin 代码审计辅助脚本 - 跨平台统一入口
-用于 Phase 0 代码度量、Phase 1 Tier 分类、Layer 1 预扫描、覆盖率检查
+Java/Kotlin/前端 代码审计辅助脚本 - 跨平台统一入口
+用于 Phase 0 代码度量、语言检测、Phase 1 Tier 分类、Layer 1 预扫描、覆盖率检查
+
+支持语言：
+- Java/Kotlin (后端)
+- JavaScript/TypeScript (前端通用)
+- React (前端框架)
+- Vue (前端框架)
+- 混合项目 (前后端分离)
 
 Usage:
     python java_audit.py <project_path> [options]
@@ -12,11 +19,13 @@ Options:
     --tier          执行 Tier 分类
     --coverage      执行覆盖率检查（需配合 --reviewed-file）
     --reviewed-file 指定审阅清单文件路径
+    --detect-lang   执行语言检测
     --output        输出格式: json (默认), sarif
     --help, -h      显示帮助信息
 
 Examples:
     python java_audit.py /path/to/project
+    python java_audit.py /path/to/project --detect-lang
     python java_audit.py /path/to/project --scan
     python java_audit.py /path/to/project --tier
     python java_audit.py /path/to/project --scan --tier
@@ -71,6 +80,266 @@ def write_file(file_path, content):
         f.write(content)
 
 # ============================================
+# 语言检测
+# ============================================
+
+def detect_project_language(project_path):
+    """检测项目主要语言类型
+    
+    返回：
+    - "java": Java/Kotlin 后端项目
+    - "javascript": JavaScript/TypeScript 前端项目
+    - "react": React 前端项目
+    - "vue": Vue 前端项目
+    - "mixed": 混合项目（前后端分离）
+    - "unknown": 无法识别
+    """
+    file_counts = {
+        "java": 0,
+        "kt": 0,
+        "js": 0,
+        "ts": 0,
+        "jsx": 0,
+        "tsx": 0,
+        "vue": 0,
+        "html": 0,
+        "css": 0,
+        "json": 0
+    }
+    
+    # 检测框架特征文件
+    has_pom = False
+    has_gradle = False
+    has_package_json = False
+    has_react_indicators = False
+    has_vue_indicators = False
+    
+    # 检测框架配置
+    for root, dirs, files in os.walk(project_path):
+        # 排除目录
+        dirs[:] = [d for d in dirs if d not in ['target', 'node_modules', '.git', 'build', 'out', '.gradle', '.idea', 'dist', '.next']]
+        
+        # 检测构建文件
+        if 'pom.xml' in files:
+            has_pom = True
+        if any(f in files for f in ['build.gradle', 'build.gradle.kts', 'settings.gradle']):
+            has_gradle = True
+        if 'package.json' in files:
+            has_package_json = True
+        
+        # 统计文件扩展名
+        for file in files:
+            ext = file.split('.')[-1].lower() if '.' in file else ''
+            if ext in file_counts:
+                file_counts[ext] += 1
+            
+            # 检测 React 特征
+            if file.endswith('.tsx') or file.endswith('.jsx'):
+                has_react_indicators = True
+            if file in ['App.js', 'App.tsx', 'index.jsx', 'index.tsx']:
+                has_react_indicators = True
+            
+            # 检测 Vue 特征
+            if file.endswith('.vue'):
+                has_vue_indicators = True
+            if file in ['App.vue', 'main.js', 'main.ts']:
+                # 检查是否是 Vue 项目
+                file_path = os.path.join(root, file)
+                content = get_file_content(file_path)
+                if 'createApp' in content or 'new Vue' in content:
+                    has_vue_indicators = True
+    
+    # 检查 package.json 内容
+    if has_package_json:
+        package_json_path = os.path.join(project_path, 'package.json')
+        if os.path.exists(package_json_path):
+            try:
+                with open(package_json_path, 'r', encoding='utf-8') as f:
+                    package_data = json.load(f)
+                    deps = package_data.get('dependencies', {})
+                    dev_deps = package_data.get('devDependencies', {})
+                    all_deps = {**deps, **dev_deps}
+                    
+                    # React 检测
+                    if 'react' in all_deps or 'react-dom' in all_deps or '@types/react' in all_deps:
+                        has_react_indicators = True
+                    
+                    # Vue 检测
+                    if 'vue' in all_deps or '@vue/cli' in all_deps or 'vue-router' in all_deps:
+                        has_vue_indicators = True
+            except:
+                pass
+    
+    # 计算语言占比
+    java_count = file_counts["java"] + file_counts["kt"]
+    frontend_count = file_counts["js"] + file_counts["ts"] + file_counts["jsx"] + file_counts["tsx"] + file_counts["vue"]
+    
+    # 判断逻辑
+    # 1. 纯 Java/Kotlin 项目
+    if java_count > 0 and frontend_count == 0:
+        return "java", {
+            "java_files": file_counts["java"],
+            "kt_files": file_counts["kt"],
+            "build_system": "maven" if has_pom else ("gradle" if has_gradle else "unknown")
+        }
+    
+    # 2. 纯前端项目
+    if java_count == 0 and frontend_count > 0:
+        if has_vue_indicators:
+            return "vue", {
+                "vue_files": file_counts["vue"],
+                "js_files": file_counts["js"],
+                "ts_files": file_counts["ts"],
+                "build_system": "npm/yarn"
+            }
+        elif has_react_indicators:
+            return "react", {
+                "jsx_files": file_counts["jsx"],
+                "tsx_files": file_counts["tsx"],
+                "js_files": file_counts["js"],
+                "ts_files": file_counts["ts"],
+                "build_system": "npm/yarn"
+            }
+        else:
+            return "javascript", {
+                "js_files": file_counts["js"],
+                "ts_files": file_counts["ts"],
+                "html_files": file_counts["html"],
+                "build_system": "npm/yarn"
+            }
+    
+    # 3. 混合项目（前后端分离）
+    if java_count > 0 and frontend_count > 0:
+        # 检查是否是前后端分离结构
+        # 常见结构：backend/ + frontend/ 或 src/main/java + src/main/frontend
+        has_backend_dir = any(d in ['backend', 'server', 'api'] for d in os.listdir(project_path) if os.path.isdir(os.path.join(project_path, d)))
+        has_frontend_dir = any(d in ['frontend', 'client', 'web', 'ui'] for d in os.listdir(project_path) if os.path.isdir(os.path.join(project_path, d)))
+        
+        if has_backend_dir or has_frontend_dir or (has_pom and has_package_json):
+            return "mixed", {
+                "java_files": file_counts["java"],
+                "kt_files": file_counts["kt"],
+                "frontend_files": frontend_count,
+                "frontend_type": "vue" if has_vue_indicators else ("react" if has_react_indicators else "javascript"),
+                "build_system": "mixed"
+            }
+        
+        # 默认认为是 Java 项目（前端文件可能是少量配置）
+        if java_count > frontend_count * 2:
+            return "java", {
+                "java_files": file_counts["java"],
+                "kt_files": file_counts["kt"],
+                "frontend_files": frontend_count,
+                "build_system": "maven" if has_pom else ("gradle" if has_gradle else "unknown")
+            }
+    
+    # 4. 无法识别
+    return "unknown", {
+        "file_counts": file_counts,
+        "has_pom": has_pom,
+        "has_gradle": has_gradle,
+        "has_package_json": has_package_json
+    }
+
+def run_language_detection(project_path, output_dir):
+    """执行语言检测"""
+    print("\n" + "=" * 60)
+    print("Phase 0: 语言检测")
+    print("=" * 60)
+    
+    language, details = detect_project_language(project_path)
+    
+    # 语言类型说明
+    language_names = {
+        "java": "Java/Kotlin 后端项目",
+        "javascript": "JavaScript/TypeScript 前端项目",
+        "react": "React 前端项目",
+        "vue": "Vue 前端项目",
+        "mixed": "混合项目（前后端分离）",
+        "unknown": "无法识别"
+    }
+    
+    print(f"\n[*] 检测结果:")
+    print(f"  语言类型: {language_names.get(language, language)}")
+    print(f"  详细信息:")
+    for key, value in details.items():
+        print(f"    {key}: {value}")
+    
+    # 根据语言类型推荐审计规则
+    recommended_rules = {
+        "java": ["java-rce.yaml", "java-config.yaml", "java-sqli.yaml", "java-auth.yaml"],
+        "javascript": ["js-security.yaml", "frontend-config.yaml"],
+        "react": ["react-security.yaml", "js-security.yaml", "frontend-config.yaml"],
+        "vue": ["vue-security.yaml", "js-security.yaml", "frontend-config.yaml"],
+        "mixed": ["java-rce.yaml", "java-config.yaml", "js-security.yaml", "frontend-config.yaml"],
+        "unknown": []
+    }
+    
+    rules = recommended_rules.get(language, [])
+    print(f"\n[*] 推荐审计规则:")
+    for rule in rules:
+        print(f"  - {rule}")
+    
+    # 生成报告
+    report_path = os.path.join(output_dir, "language-detection.md")
+    report_content = f"""# 语言检测结果
+
+## 检测摘要
+
+| 项目 | 结果 |
+|------|------|
+| 语言类型 | **{language_names.get(language, language)}** |
+| 检测时间 | {datetime.now().isoformat()} |
+
+## 详细信息
+
+| 指标 | 数值 |
+|------|------|
+"""
+    for key, value in details.items():
+        report_content += f"| {key} | {value} |\n"
+    
+    report_content += f"""
+## 推荐审计规则
+
+根据检测到的语言类型，推荐使用以下 Semgrep 规则：
+
+"""
+    for rule in rules:
+        report_content += f"- `{rule}`\n"
+    
+    report_content += f"""
+## 审计流程建议
+
+"""
+    if language == "java":
+        report_content += """- 执行 Java 后端审计流程
+- Tier 分类：Controller(T1) → Service(T2) → Entity(T3)
+- 重点检查：反序列化、SQL注入、命令执行、认证绕过
+"""
+    elif language in ["javascript", "react", "vue"]:
+        report_content += """- 执行前端审计流程
+- Tier 分类：页面组件(T1) → 业务组件(T2) → 工具函数(T3)
+- 重点检查：XSS、DOM操作、敏感信息泄露、配置安全
+"""
+    elif language == "mixed":
+        report_content += """- 执行前后端分离审计流程
+- 后端：Java 后端审计流程
+- 前端：前端审计流程
+- 重点检查：API安全、前后端数据交互、认证机制
+"""
+    
+    write_file(report_path, report_content)
+    print(f"\n[OK] 语言检测报告: {report_path}")
+    
+    return {
+        "language": language,
+        "language_name": language_names.get(language, language),
+        "details": details,
+        "recommended_rules": rules
+    }
+
+# ============================================
 # Tier 分类
 # ============================================
 
@@ -85,8 +354,30 @@ def classify_tier(file_path, content=None):
     if '/target/' in file_path or 'node_modules' in file_path or '/build/' in file_path:
         return "SKIP"
     
-    # Rule 2: Controller/Filter
-    if any(x in content for x in ['@Controller', '@RestController', '@WebServlet', 'extends Filter', 'implements Filter', '@HttpController']):
+    # Rule 2: Controller/Filter (扩展支持多框架)
+    # Spring MVC
+    t1_patterns = [
+        '@Controller', '@RestController',
+        # Servlet (javax + jakarta)
+        '@WebServlet', 'extends HttpServlet', 'implements Servlet',
+        # Struts 2
+        'extends ActionSupport', 'implements Action', '@Action', '@StrutsAction',
+        # Filter (javax + jakarta)
+        '@WebFilter', 'implements Filter', 'extends OncePerRequestFilter', 'extends GenericFilterBean',
+        # Jersey/JAX-RS
+        '@Path', '@Provider', 'extends ResourceConfig',
+        # Play Framework
+        'extends Controller', 'extends Action', 'extends Results',
+        # Vert.x
+        '@Route', 'extends AbstractVerticle', 'Router.',
+        # Dubbo
+        '@Service(', '@DubboService', '@AlibabaDubboService',  # Dubbo 服务暴露注解
+        # gRPC
+        'extends AbstractService', 'extends GeneratedServiceV3',
+        # 其他 Web 框架
+        '@HttpController', '@Router', '@Endpoint'
+    ]
+    if any(x in content for x in t1_patterns):
         return "T1"
     
     # Rule 3: Service/DAO
@@ -247,13 +538,17 @@ SCENARIO_KEYWORDS = {
     }
 }
 
-def identify_scenario(method, path, annotations):
+def identify_scenario(method, path, annotations, method_name=""):
     """根据方法、路径和注解识别场景类型"""
-    combined = f"{method} {path} {' '.join(annotations)}".lower()
+    # 只在路径和方法名中匹配，排除注释和变量名
+    # 使用单词边界匹配避免误报（如 paymentService 变量名）
+    combined = f"{method} {path} {method_name}".lower()
     
     for scenario, config in SCENARIO_KEYWORDS.items():
         for keyword in config["keywords"]:
-            if keyword.lower() in combined:
+            # 使用单词边界匹配，避免匹配变量名或注释中的关键词
+            # 例如：避免 "paymentService" 匹配到 "payment"
+            if re.search(rf'\b{re.escape(keyword.lower())}\b', combined):
                 return scenario, config["risk_level"], config["focus_checks"]
     
     # 默认返回 DATA_ACCESS
@@ -460,22 +755,18 @@ def run_layer1_scan(project_path, output_dir):
     
     print(f"\n[*] 总计发现: {total_findings} 处危险模式")
     
-    # 生成报告
-    for priority in ["P0", "P1", "P2", "P3"]:
-        report_path = os.path.join(output_dir, f"{priority.lower()}-{['critical', 'high', 'medium', 'low'][['P0', 'P1', 'P2', 'P3'].index(priority)]}.md")
+    # 生成报告 - 只生成有内容的报告（P0/P1/P2），移除无意义的 P3 文件
+    priority_names = {"P0": "critical", "P1": "high", "P2": "medium"}
+    for priority in ["P0", "P1", "P2"]:
+        report_path = os.path.join(output_dir, f"{priority.lower()}-{priority_names[priority]}.md")
         
-        if priority in results or priority == "P3":
+        if priority in results:
             content = f"# {priority} 级危险模式\n\n## 发现记录\n\n"
-            
-            if priority in results:
-                for category, findings in results[priority].items():
-                    content += f"### {category}\n\n"
-                    for f in findings:
-                        content += f"- `{f['file']}:{f['line']}` - `{f['keyword']}`\n"
-                    content += "\n"
-            else:
-                content += "未发现该级别危险模式。\n"
-            
+            for category, findings in results[priority].items():
+                content += f"### {category}\n\n"
+                for f in findings:
+                    content += f"- `{f['file']}:{f['line']}` - `{f['keyword']}`\n"
+                content += "\n"
             write_file(report_path, content)
     
     print(f"\n[OK] 扫描报告: {output_dir}/p0-critical.md, p1-high.md, p2-medium.md")
@@ -527,11 +818,12 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
     if os.path.exists(reviewed_file):
         content = get_file_content(reviewed_file)
         
-        # 方法1: 从 markdown 表格格式提取（优先）
-        # 匹配格式: | 1 | UserController.java | T1 | 完成 |
-        table_matches = re.findall(r'\|\s*\d*\s*\|\s*`?([a-zA-Z0-9_/-]+\.(java|kt))`?\s*\|\s*(T[123])', content)
+        # 方法1: 从 markdown 表格格式提取（优先，最准确）
+        # 匹配格式: | 1 | UserController.java | T1 | 完成 | 或带路径格式
+        # 使用更严格的正则，要求文件名前有序号或路径分隔符
+        table_matches = re.findall(r'\|\s*\d+\s*\|\s*`?([a-zA-Z0-9_/.-]+\.(java|kt))`?\s*\|\s*(T[123])', content)
         for match in table_matches:
-            filename = match[0]
+            filename = os.path.basename(match[0])  # 提取文件名部分
             tier = match[2]
             reviewed_files.add(filename)
             if tier == "T1":
@@ -541,17 +833,30 @@ def run_coverage_check(project_path, reviewed_file, output_dir):
             elif tier == "T3":
                 reviewed_t3.add(filename)
         
-        # 方法2: 从代码块中的文件路径提取（备用）
+        # 方法2: 从代码块中的完整路径提取（备用）
+        # 要求路径包含至少一个目录分隔符，避免匹配类名
         if not reviewed_files:
-            # 匹配相对路径格式的文件引用
-            code_block_matches = re.findall(r'`([a-zA-Z0-9_/-]+\.(java|kt))`', content)
-            reviewed_files = set(code_block_matches)
+            # 匹配带完整路径的文件引用: `src/main/java/com/example/UserController.java`
+            code_block_matches = re.findall(r'`([a-zA-Z0-9_/.-]+/[a-zA-Z0-9_-]+\.(java|kt))`', content)
+            for match in code_block_matches:
+                filename = os.path.basename(match[0])
+                reviewed_files.add(filename)
         
-        # 方法3: 从行首文件列表提取（最后备用）
+        # 方法3: 从行首文件路径列表提取（最后备用）
         if not reviewed_files:
-            # 匹配单独一行的文件路径
-            line_matches = re.findall(r'^\s*([a-zA-Z0-9_/-]+\.(java|kt))\s*$', content, re.MULTILINE)
-            reviewed_files = set(line_matches)
+            # 匹配单独一行的完整路径（要求包含路径分隔符）
+            line_matches = re.findall(r'^\s*([a-zA-Z0-9_/.-]+/[a-zA-Z0-9_-]+\.(java|kt))\s*$', content, re.MULTILINE)
+            for match in line_matches:
+                filename = os.path.basename(match)
+                reviewed_files.add(filename)
+        
+        # 方法4: 从漏洞报告的代码位置提取
+        # 格式: 代码位置：E:\path\to\File.java:123 或 /path/to/File.java:123
+        if not reviewed_files:
+            code_location_matches = re.findall(r'代码位置[：:\s]*\n\s*`?([a-zA-Z0-9_/.-:/\\]+\.(java|kt)):\d+', content)
+            for match in code_location_matches:
+                filename = os.path.basename(match[0].replace('\\', '/'))
+                reviewed_files.add(filename)
     
     reviewed_count = len(reviewed_files)
     
@@ -797,12 +1102,99 @@ def to_sarif(scan_results, project_path):
     return sarif
 
 # ============================================
-# 主函数
+# 主入口函数（供 audit.py 调用）
+# ============================================
+
+def run_java_audit(project_path, output_dir, args=None):
+    """Java/Kotlin 后端审计主入口
+    
+    Args:
+        project_path: 项目根目录
+        output_dir: 输出目录
+        args: 命令行参数对象（可选）
+    
+    Returns:
+        dict: 审计结果
+    """
+    print("\n" + "=" * 60)
+    print("Java/Kotlin 后端审计")
+    print("=" * 60)
+    
+    # Phase 0: 代码度量
+    print("\n[*] 项目路径:", project_path)
+    
+    stats = measure_project(project_path)
+    
+    print("\n[*] 项目统计:")
+    print(f"  构建系统: {stats['build_system'].upper()}")
+    print(f"  总代码行数: {stats['total_loc']:,}")
+    print(f"  Java 文件: {stats['java_files']}")
+    print(f"  Kotlin 文件: {stats['kt_files']}")
+    print(f"  XML 文件: {stats['xml_files']}")
+    print(f"  Controller 数量: {stats['controllers']}")
+    print(f"  模块数: {stats['modules']}")
+    
+    print("\n[*] Tier 分类统计:")
+    for tier in ["T1", "T2", "T3", "SKIP"]:
+        print(f"  {tier}: {stats['tier_stats'][tier]['files']} 文件, {stats['tier_stats'][tier]['loc']:,} LOC")
+    
+    print("\n[*] EALOC 计算:")
+    print(f"  EALOC = {stats['ealoc']:,.0f}")
+    print(f"  建议 Agent 数: {stats['agents_needed']}")
+    
+    # Phase 1: Tier 分类
+    tier_results = None
+    if args and hasattr(args, 'tier') and args.tier:
+        tier_results = run_tier_classification(project_path, output_dir)
+    elif args is None:
+        # 默认执行 Tier 分类
+        tier_results = run_tier_classification(project_path, output_dir)
+    
+    # Phase 1: 场景标签生成
+    scenario_results = None
+    if args and hasattr(args, 'scenario') and args.scenario:
+        scenario_results = generate_scenario_tags(project_path, output_dir)
+    
+    # Layer 1: 预扫描
+    scan_results = None
+    if args and hasattr(args, 'scan') and args.scan:
+        scan_results = run_layer1_scan(project_path, output_dir)
+    elif args is None:
+        # 默认执行预扫描
+        scan_results = run_layer1_scan(project_path, output_dir)
+    
+    # Phase 2.5: 覆盖率检查
+    coverage_results = None
+    if args and hasattr(args, 'coverage') and args.coverage:
+        if hasattr(args, 'reviewed_file') and args.reviewed_file:
+            coverage_results = run_coverage_check(project_path, args.reviewed_file, output_dir)
+    
+    # 输出结果
+    output_data = {
+        "language": "java",
+        "metrics": stats,
+        "tier_results": tier_results,
+        "scenario_results": scenario_results,
+        "scan_results": scan_results,
+        "coverage_results": coverage_results,
+        "generated_at": datetime.now().isoformat()
+    }
+    
+    output_path = os.path.join(output_dir, "java-audit-metrics.json")
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(output_data, f, ensure_ascii=False, indent=2)
+    
+    print(f"\n[OK] Java 审计完成，结果保存到: {output_path}")
+    
+    return output_data
+
+# ============================================
+# 主函数（独立运行）
 # ============================================
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Java/Kotlin 代码审计辅助脚本 - 跨平台统一入口",
+        description="Java/Kotlin 代码审计辅助脚本",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
@@ -834,72 +1226,8 @@ def main():
     output_dir = args.output_dir or os.path.join(args.project_path, "audit-output")
     os.makedirs(output_dir, exist_ok=True)
     
-    # Phase 0: 代码度量
-    print("=" * 60)
-    print("Phase 0: 代码库度量")
-    print("=" * 60)
-    
-    stats = measure_project(args.project_path)
-    
-    print("\n[*] 项目统计:")
-    print(f"  构建系统: {stats['build_system'].upper()}")
-    print(f"  总代码行数: {stats['total_loc']:,}")
-    print(f"  Java 文件: {stats['java_files']}")
-    print(f"  Kotlin 文件: {stats['kt_files']}")
-    print(f"  XML 文件: {stats['xml_files']}")
-    print(f"  Controller 数量: {stats['controllers']}")
-    print(f"  模块数: {stats['modules']}")
-    
-    print("\n[*] Tier 分类统计:")
-    for tier in ["T1", "T2", "T3", "SKIP"]:
-        print(f"  {tier}: {stats['tier_stats'][tier]['files']} 文件, {stats['tier_stats'][tier]['loc']:,} LOC")
-    
-    print("\n[*] EALOC 计算:")
-    print(f"  EALOC = {stats['ealoc']:,.0f}")
-    print(f"  建议 Agent 数: {stats['agents_needed']}")
-    
-    # Phase 1: Tier 分类
-    tier_results = None
-    if args.tier:
-        tier_results = run_tier_classification(args.project_path, output_dir)
-    
-    # Phase 1: 场景标签生成
-    scenario_results = None
-    if args.scenario:
-        scenario_results = generate_scenario_tags(args.project_path, output_dir)
-    
-    # Layer 1: 预扫描
-    scan_results = {}
-    if args.scan:
-        scan_results = run_layer1_scan(args.project_path, output_dir)
-    
-    # Phase 2.5: 覆盖率检查
-    coverage_results = None
-    if args.coverage:
-        if not args.reviewed_file:
-            print("\n[!] 错误: 覆盖率检查需要指定 --reviewed-file 参数")
-        else:
-            coverage_results = run_coverage_check(args.project_path, args.reviewed_file, output_dir)
-    
-    # 输出结果
-    if args.output == "sarif" and args.scan:
-        output_data = to_sarif(scan_results, args.project_path)
-        output_path = os.path.join(output_dir, "audit-results.sarif")
-    else:
-        output_data = {
-            "metrics": stats,
-            "tier_results": tier_results,
-            "scenario_results": scenario_results,
-            "scan_results": scan_results if args.scan else None,
-            "coverage_results": coverage_results,
-            "generated_at": datetime.now().isoformat()
-        }
-        output_path = os.path.join(output_dir, "audit-metrics.json")
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(output_data, f, ensure_ascii=False, indent=2)
-    
-    print(f"\n[OK] 结果已保存到: {output_path}")
+    # 调用审计主入口
+    run_java_audit(args.project_path, output_dir, args)
 
 if __name__ == "__main__":
     main()
