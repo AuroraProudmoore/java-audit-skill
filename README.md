@@ -13,7 +13,7 @@
 
 [中文文档](#中文文档) | [English Documentation](#english-documentation)
 
-📧 Email: aurora1219@139.com
+📧 Email: 997689721@qq.com
 </div>
 
 ---
