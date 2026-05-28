@@ -1,13 +1,6 @@
 ---
 name: java-audit-skill
-description: |
-  AI驱动的Java/前端代码安全审计技能，实现系统化、高覆盖率的漏洞挖掘。使用场景：
-  (1) 审计Java/Kotlin项目寻找安全漏洞（0day挖掘、代码审计、安全评估）
-  (2) 审计前端项目（JavaScript/TypeScript/React/Vue）寻找安全漏洞
-  (3) 企业级代码库的安全审计（支持大型项目）
-  (4) 需要高质量、低幻觉率的安全审计报告
-  (5) CI/CD集成的前期漏洞发现
-  触发关键词：Java审计、代码审计、安全审计、漏洞挖掘、0day、安全评估、前端审计、React审计、Vue审计、Java security audit、code review for security
+description: "AI驱动的Java/前端代码安全审计技能，实现系统化、高覆盖率的漏洞挖掘。使用场景：(1) 审计Java/Kotlin项目寻找安全漏洞（0day挖掘、代码审计、安全评估）(2) 审计前端项目（JavaScript/TypeScript/React/Vue）寻找安全漏洞 (3) 企业级代码库的安全审计（支持大型项目）(4) 需要高质量、低幻觉率的安全审计报告 (5) CI/CD集成的前期漏洞发现。触发关键词：Java审计、代码审计、安全审计、漏洞挖掘、0day、安全评估、前端审计、React审计、Vue审计、Java security audit、code review for security"
 ---
 
 # AI+Java/前端 代码审计 Skill
@@ -170,37 +163,6 @@ find . -name "pom.xml" | wc -l
 
 # 统计模块数（Gradle 多模块项目）
 find . -name "build.gradle" -o -name "build.gradle.kts" | wc -l
-```
-
-**Windows (PowerShell):**
-
-```powershell
-# 统计代码行数和文件数
-Get-ChildItem -Recurse -Include *.java,*.kt,*.xml | Measure-Object -Property Length -Sum
-
-# 统计各类型文件数
-(Get-ChildItem -Recurse -Filter *.java).Count
-(Get-ChildItem -Recurse -Filter *.kt).Count
-(Get-ChildItem -Recurse -Filter *.xml).Count
-
-# 统计 Controller/入口点数量（多种框架）
-# Spring MVC
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@Controller|@RestController" | Measure-Object | Select-Object -ExpandProperty Count
-
-# 原生 Servlet
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@WebServlet|extends HttpServlet|implements Servlet" | Measure-Object | Select-Object -ExpandProperty Count
-
-# Struts Action
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "extends ActionSupport|implements Action|@Action" | Measure-Object | Select-Object -ExpandProperty Count
-
-# Filter（也是 T1 级文件）
-Select-String -Path (Get-ChildItem -Recurse -Filter *.java).FullName -Pattern "@WebFilter|implements Filter|extends OncePerRequestFilter" | Measure-Object | Select-Object -ExpandProperty Count
-
-# 统计模块数（Maven）
-(Get-ChildItem -Recurse -Filter pom.xml).Count
-
-# 统计模块数（Gradle）
-(Get-ChildItem -Recurse -Include build.gradle,build.gradle.kts).Count
 ```
 
 ### 输出文件: `audit-metrics.json`
@@ -734,12 +696,7 @@ Get-ChildItem -Recurse -Include *.java,*.kt | Select-String -Pattern "@InitBinde
 
 当发现 `@InitBinder` 或 `setDisallowedFields` 时，**必须按以下步骤验证**：
 
-**Step 1：验证类继承关系**
-
-```powershell
-# 检查 Controller 是否继承了父类
-Select-String -Path $controllerFile -Pattern "class.*Controller.*extends|class.*Controller\s*\{"
-```
+**Step 1：验证类继承关系**（`grep -rn "class.*Controller.*extends"`）
 
 | 情况 | 结论 |
 |------|------|
@@ -748,11 +705,6 @@ Select-String -Path $controllerFile -Pattern "class.*Controller.*extends|class.*
 
 **Step 2：验证参数绑定方式**
 
-```powershell
-# 检查接口参数注解
-Select-String -Path $controllerFile -Pattern "@RequestBody|@ModelAttribute|@RequestParam|public.*\("
-```
-
 | 参数注解 | 受 @InitBinder 影响 | 分析重点 |
 |---------|-------------------|---------|
 | `@RequestBody` | ❌ 否（JSON 反序列化） | 检查 DTO 字段 |
@@ -760,19 +712,9 @@ Select-String -Path $controllerFile -Pattern "@RequestBody|@ModelAttribute|@Requ
 | 无注解（对象参数） | ✅ 是 | 高风险，需详细分析 |
 | `@RequestParam` | ⚠️ 部分（单个字段） | 低风险 |
 
-**Step 3：验证业务场景**
+**Step 3：验证业务场景**（`grep -rn "UserService|isAdmin|role|permission"`）
 
-```powershell
-# 检查是否涉及用户管理
-Select-String -Path $files -Pattern "UserService|UserRepository|isAdmin|role|permission"
-```
-
-**Step 4：验证 DTO 字段**
-
-```powershell
-# 读取 DTO 类定义，检查字段
-Get-Content $dtoFile
-```
+**Step 4：验证 DTO 字段** — 读取 DTO 类定义，检查是否含敏感字段
 
 **正确结论格式**：
 
@@ -939,61 +881,7 @@ Step 4: 漏洞结果判定 → 基于推演给出负责任结论
 
 #### 依赖安全检查
 
-⚠️ **必须通过 mvnrepository.com 联网核实**，不再使用离线规则表。
-
-```
-检查流程：
-1. 读取 pom.xml/build.gradle 提取依赖版本
-2. 构建 mvnrepository.com 查询 URL
-3. 使用 tavily + web_fetch 查询组件页面
-4. 检查当前版本的 "Direct vulnerabilities" 标记
-5. 找到无漏洞的安全版本
-```
-
-**mvnrepository.com 查询方法**：
-
-```
-URL 格式: https://mvnrepository.com/artifact/{groupId}/{artifactId}
-
-示例:
-https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core
-https://mvnrepository.com/artifact/com.alibaba/fastjson
-https://mvnrepository.com/artifact/org.apache.shiro/shiro-core
-```
-
-**漏洞标记识别**：
-- 有漏洞版本：页面显示 `Direct vulnerabilities: CVE-XXXX-XXXXX`
-- 安全版本：无 `Direct vulnerabilities` 标记
-
-**执行命令**：
-
-```bash
-# 方式一：tavily 搜索定位
-node ~/.openclaw/workspace/skills/tavily-search/scripts/search.mjs "mvnrepository {groupId} {artifactId}" -n 5
-
-# 方式二：直接 web_fetch 组件页面
-# 使用 OpenClaw 的 web_fetch 工具访问 mvnrepository.com 页面
-```
-
-**检查示例**：
-
-```
-发现依赖: httpclient 4.5.12
-
-Step 1: 访问 mvnrepository.com/artifact/org.apache.httpcomponents/httpclient
-
-Step 2: 检查版本列表:
-  - 4.5.12: Direct vulnerabilities: CVE-2020-13956 → ❌ 有漏洞
-  - 4.5.14: 无标记 → ✅ 安全版本
-
-结论: 需要升级到 4.5.14+
-```
-
-**⚠️ 核实铁律**：
-
-1. **禁止凭记忆编造安全版本** - 必须在 mvnrepository.com 上核实
-2. **必须检查 "Direct vulnerabilities"** - 这是直接依赖漏洞，非间接依赖
-3. **必须找到无标记的安全版本** - 在版本列表中寻找无漏洞标记的最新版本
+依赖安全检查流程和方法详见 **Phase 1.4**。此处不再重复。
 
 #### 运行时配置
 
@@ -1583,178 +1471,13 @@ E:\工作代码\xx\xx\src\main\java\com\example\controller\CommonController.java
 # 任意文件上传漏洞
 ```
 
-### 反幻觉铁律（再次强调）
-
-1. **报告漏洞前必须用 Read 验证文件存在**
-2. **代码片段必须来自实际 Read 输出，不得编造**
-3. **调用链每一跳必须标注 文件:行号**
-4. **不确定的发现标记为 HYPOTHESIS，不得标记为 CONFIRMED**
-5. **分析深度必须达到 L3 级别**（见 report-template.md）
-
-#### 行号定位规范
-
-- **必须使用实际验证的行号**，禁止模糊范围
-- 精确到方法起始行，多段代码分开标注
-- 示例：`HttpUtil.java:252-253, 321` 而非 `HttpUtil.java:177-193`
+反幻觉铁律和行号定位规范详见 **Phase 3**。
 
 ### 报告输出文件
 
 - `findings-raw.md`: Phase 2 发现的候选漏洞
 - `findings-verified.md`: Phase 3 验证后的确认漏洞（最终数据源）
 - `audit-report.md`: Phase 5 格式化的最终报告
-
----
-
-## AI 代码审计 6 大核心方法
-
-### 1. 语义化规则匹配
-
-传统工具的规则是"死"的——只能匹配固定参数名。AI 通过语义识别核心业务含义，适配任意命名规范。
-
-**示例**：越权漏洞检测
-- 传统规则：检查是否存在 `user_id` 参数
-- AI 语义规则：识别接口中所有代表用户身份标识的参数，校验该参数用于定位业务数据归属时，是否与当前登录用户的身份存在强制绑定
-
-**适用场景**：未授权访问、通用越权、验证码绕过、密码重置漏洞
-
-### 2. 基于因果推理的业务流程异常审计
-
-AI 先构建业务的因果关系基准与状态机模型，明确每个业务操作的强制前置条件（因）与合法后置状态（果），再通过反事实推理验证。
-
-**示例**：电商支付场景
-- 强制前置条件：订单已创建且未支付、支付金额一致、回调凭证合法
-- 合法后置状态：订单变为待发货、库存扣减、生成发货单
-- 测试用例：跳过支付直接调用发货确认接口
-
-**适用场景**：流程绕过、步骤颠倒、非法状态跳转
-
-### 3. 权限与访问控制的逻辑一致性审计
-
-构建完整的权限-资源绑定模型，执行三类校验：
-
-| 校验类型 | 方法 | 覆盖漏洞 |
-|----------|------|----------|
-| 水平越权校验 | 用同角色不同用户凭证测试 | 访问他人私有数据 |
-| 垂直越权校验 | 用低权限凭证测试高权限接口 | 权限提升 |
-| 一致性校验 | 对比同类接口权限校验逻辑 | 部分遗漏校验 |
-
-**适用场景**：水平/垂直越权、未授权访问、前后端权限不一致
-
-### 4. 边界条件与异常分支的对抗性生成审计
-
-基于参数的业务语义生成对抗性测试用例，而非随机字符串：
-
-| 参数类型 | 测试值 | 目标漏洞 |
-|----------|--------|----------|
-| 金额 | 负数、0、极大值、超2位小数 | 0元支付、负金额退款 |
-| 数量 | 负数、超库存上限 | 库存为负、超量下单 |
-| 时间 | 超期时间、早于当前时间 | 绕过有效期限制 |
-
-**白盒扫描重点**：异常捕获分支是否存在"跳过权限校验"、"异常时返回成功"、"泄露敏感信息"
-
-### 5. 多维度关联的漏洞链推理
-
-将单个缺陷按业务场景、接口依赖、数据流转关系关联，自动识别可串联的漏洞点。
-
-**示例漏洞链**：
-1. `/api/user/list` 未授权访问 → 获取全量用户手机号和 user_id
-2. `/api/user/password/reset` 仅校验手机号和 user_id，无验证码
-
-→ 串联形成完整攻击链，实现任意用户密码重置
-
-### 6. 白盒场景的代码语义级逻辑缺陷审计
-
-重点扫描高频逻辑缺陷场景：
-
-- 权限校验缺失（仅校验登录，未校验数据归属）
-- 业务逻辑错误（金额计算顺序、库存扣减顺序）
-- 异常处理缺陷（捕获异常后直接返回成功）
-- 接口设计缺陷（无幂等性、敏感操作无二次校验）
-
----
-
-## 长上下文问题 5 层解决方案
-
-### 层级 1: 源头治理（性价比最高，降低 60%+ 上下文）
-
-**必过滤内容**：
-- 注释、空行、纯日志打印代码
-- 单元测试文件
-- 第三方依赖库
-- 构建配置文件
-- 自动生成代码（protobuf、MyBatis Mapper）
-
-**可过滤低风险内容**：
-- 仅含 get/set 的纯数据实体类
-- 无安全风险的工具方法
-- 非核心统计报表代码
-
-**注意**：过滤必须基于语义识别，不能误删权限校验、加密解密、输入过滤等核心安全代码。
-
-### 层级 2: 三层递进式审计架构（核心方案）
-
-| 层级 | 内容 | Token 控制 |
-|------|------|------------|
-| 第一层：全局架构层 | 项目架构说明、模块划分、全局权限模型、核心拦截器规则、对外接口清单 | ≤ 8K |
-| 第二层：模块级审计 | 按业务域拆分独立审计单元，输入模块代码+全局安全基线+依赖接口元数据 | 32K-64K |
-| 第三层：跨模块验证 | 仅输入关联模块核心代码片段+调用链路元数据 | ≤ 64K |
-
-### 层级 3: 结构化语义压缩（降低 70%+ Token）
-
-将代码转化为结构化元数据：
-
-```
-函数名：updateOrder
-输入参数：orderId（用户可控字符串）、orderStatus（整型枚举）
-核心业务逻辑：根据 orderId 修改订单状态
-安全特征：无订单归属用户校验，无操作权限校验
-下游依赖：orderDao.update
-风险标签：越权风险高
-```
-
-### 层级 4: RAG + 多轮对话（突破窗口物理限制）
-
-1. **构建代码知识库**：按函数/类拆分，生成向量嵌入存入向量库
-2. **精准检索相关上下文**：通过自然语言或风险特征检索相关代码片段
-3. **多轮对话增量审计**：每轮处理一个细分目标，上一轮输出作为下一轮轻量上下文
-
-### 层级 5: 增量审计机制（工程化落地）
-
-与 Git/CI/CD 集成，仅审计本次提交变更的代码及相关调用链路，减少 90%+ 上下文量。
-
----
-
-## 5 大落地误区
-
-### ❌ 误区 1：简单按行数拆分代码
-
-**问题**：破坏代码语义关联，导致跨文件调用链路无法理解，严重漏报
-
-**正确做法**：按业务边界、依赖关系拆分，采用三层递进式架构
-
-### ❌ 误区 2：过度依赖长窗口模型
-
-**问题**：超过 128K token 后注意力严重衰减，且成本极高
-
-**正确做法**：中等窗口 + 裁剪分块 + RAG，长窗口仅作跨模块验证辅助
-
-### ❌ 误区 3：全量代码丢给 AI
-
-**问题**：上下文溢出、无关信息干扰、误报率飙升、速度极慢
-
-**正确做法**：完成无效信息过滤与风险分级，遵循"非必要不输入"
-
-### ❌ 误区 4：完全抛弃传统工具
-
-**问题**：大模型存在幻觉问题，无法被规则匹配弥补
-
-**正确做法**：传统工具前置过滤 + AI 深度推理 + 传统工具后置验证
-
-### ❌ 误区 5：只关注已知漏洞
-
-**问题**：浪费 AI 核心能力——检测业务逻辑漏洞
-
-**正确做法**：聚焦传统工具无法覆盖的逻辑缺陷、越权漏洞、流程绕过
 
 ---
 
